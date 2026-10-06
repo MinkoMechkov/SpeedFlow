@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,22 +15,77 @@ import {
 } from "@/components/ui/select";
 import type { Tool } from "@/lib/types";
 
-export function UploadForm({ tools }: { tools: Tool[] }) {
+const CUSTOM_TOOL = "__custom__";
+
+function toolLabel(tool: Tool) {
+  return `${tool.name} · ${tool.vendor}`;
+}
+
+export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
   const router = useRouter();
-  const [toolId, setToolId] = useState(tools[0]?.id ?? "");
+  const [tools, setTools] = useState(initialTools);
+  const [toolId, setToolId] = useState(initialTools[0]?.id ?? "");
+  const [customName, setCustomName] = useState("");
+  const [customVendor, setCustomVendor] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const isCustom = toolId === CUSTOM_TOOL;
+
+  const selectItems = useMemo(() => {
+    const items: Record<string, string> = {
+      [CUSTOM_TOOL]: "Add custom tool…",
+    };
+    for (const tool of tools) {
+      items[tool.id] = toolLabel(tool);
+    }
+    return items;
+  }, [tools]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!toolId || !file) {
-      toast.error("Select a tool and invoice file");
+    if (!file) {
+      toast.error("Select an invoice file");
       return;
     }
+
     setLoading(true);
     try {
+      let resolvedToolId = toolId;
+
+      if (isCustom) {
+        const name = customName.trim();
+        if (!name) {
+          toast.error("Enter a tool name");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch("/api/tools", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            vendor: customVendor.trim() || name,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to create tool");
+        const tool = data.tool as Tool;
+        setTools((prev) =>
+          prev.some((t) => t.id === tool.id) ? prev : [...prev, tool],
+        );
+        resolvedToolId = tool.id;
+        setToolId(tool.id);
+      }
+
+      if (!resolvedToolId || resolvedToolId === CUSTOM_TOOL) {
+        toast.error("Select a tool");
+        setLoading(false);
+        return;
+      }
+
       const form = new FormData();
-      form.set("toolId", toolId);
+      form.set("toolId", resolvedToolId);
       form.set("file", file);
       const res = await fetch("/api/invoices/upload", {
         method: "POST",
@@ -52,16 +107,21 @@ export function UploadForm({ tools }: { tools: Tool[] }) {
     <form onSubmit={onSubmit} className="max-w-xl space-y-5">
       <div className="space-y-2">
         <Label htmlFor="tool">Tool</Label>
-        <Select value={toolId} onValueChange={(v) => setToolId(v ?? "")}>
+        <Select
+          value={toolId}
+          onValueChange={(v) => setToolId(v ?? "")}
+          items={selectItems}
+        >
           <SelectTrigger id="tool" className="w-full">
             <SelectValue placeholder="Select tool" />
           </SelectTrigger>
           <SelectContent>
             {tools.map((tool) => (
               <SelectItem key={tool.id} value={tool.id}>
-                {tool.name} · {tool.vendor}
+                {toolLabel(tool)}
               </SelectItem>
             ))}
+            <SelectItem value={CUSTOM_TOOL}>Add custom tool…</SelectItem>
           </SelectContent>
         </Select>
         <p className="text-xs text-muted-foreground">
@@ -69,6 +129,31 @@ export function UploadForm({ tools }: { tools: Tool[] }) {
           someone else.
         </p>
       </div>
+
+      {isCustom ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="custom-name">Tool name</Label>
+            <Input
+              id="custom-name"
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              placeholder="e.g. ChatGPT"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="custom-vendor">Vendor</Label>
+            <Input
+              id="custom-vendor"
+              value={customVendor}
+              onChange={(e) => setCustomVendor(e.target.value)}
+              placeholder="e.g. OpenAI"
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         <Label htmlFor="file">Invoice file</Label>
         <Input

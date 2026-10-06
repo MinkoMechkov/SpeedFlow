@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { getReimbursementReport } from "@/lib/data";
-import { monthKey } from "@/lib/invoices/calculate";
+
+function parseMonths(value: string | null): 1 | 2 | 3 {
+  const n = Number(value);
+  if (n === 2 || n === 3) return n;
+  return 1;
+}
 
 export async function GET(request: Request) {
   const session = await getSessionUser();
@@ -10,11 +15,15 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const month = searchParams.get("month") ?? monthKey(new Date());
-  const report = await getReimbursementReport(month);
+  const span = parseMonths(searchParams.get("months"));
+  const report = await getReimbursementReport({ months: span });
+  const range = [...report.months]
+    .reverse()
+    .map((m) => m.slice(0, 7))
+    .join("_to_");
 
   const lines = [
-    "Employee,Email,Department,Monthly Reimbursement (EUR)",
+    "Employee,Email,Department,Reimbursement (EUR)",
     ...report.rows.map(
       (r) =>
         `"${r.employee.name}","${r.employee.email}","${r.employee.department ?? ""}",${r.amount.toFixed(2)}`,
@@ -25,7 +34,7 @@ export async function GET(request: Request) {
   return new NextResponse(lines.join("\n"), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="spendflow-reimbursement-${month}.csv"`,
+      "Content-Disposition": `attachment; filename="spendflow-reimbursement-${span}m-${range}.csv"`,
     },
   });
 }

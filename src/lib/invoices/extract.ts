@@ -1,82 +1,217 @@
+import { convertExtractionToEur } from "@/lib/invoices/currency";
 import type { BillingCycle, InvoiceExtractionPayload, Tool } from "@/lib/types";
 
 export type ExtractionResult = {
   payload: InvoiceExtractionPayload;
   confidence: number;
   model: string;
+  /** Extra validation / audit flags from extraction (mock fallback, FX, …). */
+  flags: string[];
 };
 
+const MAX_INLINE_BYTES = 15 * 1024 * 1024;
+const GEMINI_MAX_ATTEMPTS = 3;
+
+const EXTRACTION_SCHEMA = {
+  type: "object",
+  properties: {
+    vendor: { type: "string", nullable: true },
+    tool_name: { type: "string", nullable: true },
+    invoice_number: { type: "string", nullable: true },
+    invoice_date: { type: "string", nullable: true },
+    billing_period_start: { type: "string", nullable: true },
+    billing_period_end: { type: "string", nullable: true },
+    billing_cycle: {
+      type: "string",
+      nullable: true,
+      enum: ["monthly", "quarterly", "yearly", "semi_annual", "other", null],
+    },
+    plan: { type: "string", nullable: true },
+    amount: { type: "number", nullable: true },
+    currency: { type: "string", nullable: true },
+    tax_amount: { type: "number", nullable: true },
+    employee_name: { type: "string", nullable: true },
+  },
+  required: [
+    "vendor",
+    "tool_name",
+    "invoice_number",
+    "invoice_date",
+    "billing_period_start",
+    "billing_period_end",
+    "billing_cycle",
+    "plan",
+    "amount",
+    "currency",
+    "tax_amount",
+    "employee_name",
+  ],
+} as const;
+
 /**
- * AI extraction with mock fallback when OPENAI_API_KEY (or LLM key) is absent.
+ * AI extraction with mock fallback when GEMINI_API_KEY is absent.
+ * Money fields are normalized to EUR in app code (not by the model).
  * Returns structured JSON only — never calculates reimbursement.
  */
 export async function extractInvoiceData(input: {
   fileName: string;
   tool: Tool;
   employeeName: string;
-  fileTextHint?: string;
+  fileBytes?: ArrayBuffer;
+  mimeType?: string;
 }): Promise<ExtractionResult> {
-  if (process.env.OPENAI_API_KEY) {
+  if (process.env.GEMINI_API_KEY) {
     try {
-      return await extractWithOpenAI(input);
+      const result = await extractWithGemini(input);
+      return await finalizeInEur(result);
     } catch (error) {
       console.warn("LLM extraction failed, using mock fallback", error);
+      const mock = mockExtract(input);
+      return {
+        ...mock,
+        confidence: Math.min(mock.confidence, 0.45),
+        flags: ["mock_extraction_used"],
+      };
     }
   }
-  return mockExtract(input);
+  const mock = mockExtract(input);
+  return { ...mock, flags: ["mock_extraction_used"] };
 }
 
-async function extractWithOpenAI(input: {
+async function finalizeInEur(
+  result: Omit<ExtractionResult, "flags">,
+): Promise<ExtractionResult> {
+  const converted = await convertExtractionToEur({
+    amount: result.payload.amount,
+    tax_amount: result.payload.tax_amount,
+    currency: result.payload.currency,
+    invoiceDate: result.payload.invoice_date,
+  });
+
+  return {
+    ...result,
+    payload: {
+      ...result.payload,
+      amount: converted.amount,
+      tax_amount: converted.tax_amount,
+      currency: converted.currency,
+    },
+    flags: converted.flags,
+  };
+}
+
+async function extractWithGemini(input: {
   fileName: string;
   tool: Tool;
   employeeName: string;
-}): Promise<ExtractionResult> {
-  const prompt = `Extract invoice fields as JSON only. Keys: vendor, tool_name, invoice_number, invoice_date, billing_period_start, billing_period_end, billing_cycle (monthly|quarterly|yearly|semi_annual|other), plan, amount, currency, tax_amount, employee_name. File: ${input.fileName}. Tool: ${input.tool.name}. Employee: ${input.employeeName}.`;
+  fileBytes?: ArrayBuffer;
+  mimeType?: string;
+}): Promise<Omit<ExtractionResult, "flags">> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY missing");
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-      temperature: 0,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You extract structured invoice data. Never compute monthly reimbursement. Return JSON only.",
+  const model = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
+  const prompt = `Extract invoice fields from the attached document (or filename if no document).
+Tool context: ${input.tool.name} (${input.tool.vendor}). Expected employee: ${input.employeeName}. File name: ${input.fileName}.
+Rules:
+- amount = total amount due (including tax), in the invoice's original currency.
+- currency = ISO code on the invoice (USD, EUR, GBP, …). Do NOT convert currencies.
+- tax_amount = tax/VAT line if present, same currency as amount.
+- Dates as YYYY-MM-DD. billing_cycle from the billed period when unclear.
+- Never compute monthly reimbursement.`;
+
+  type Part =
+    | { text: string }
+    | { inline_data: { mime_type: string; data: string } };
+
+  const parts: Part[] = [];
+
+  if (input.fileBytes && input.fileBytes.byteLength > 0) {
+    if (input.fileBytes.byteLength > MAX_INLINE_BYTES) {
+      console.warn(
+        `Invoice file ${input.fileName} exceeds ${MAX_INLINE_BYTES} bytes; skipping inline Gemini attachment`,
+      );
+    } else {
+      parts.push({
+        inline_data: {
+          mime_type: input.mimeType ?? "application/pdf",
+          data: Buffer.from(input.fileBytes).toString("base64"),
         },
-        { role: "user", content: prompt },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`OpenAI error ${res.status}`);
+      });
+    }
   }
 
-  const data = (await res.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Empty LLM response");
+  parts.push({ text: prompt });
 
-  const parsed = JSON.parse(content) as InvoiceExtractionPayload;
-  return {
-    payload: normalizePayload(parsed, input.tool, input.employeeName),
-    confidence: 0.92,
-    model: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
-  };
+  const body = JSON.stringify({
+    systemInstruction: {
+      parts: [
+        {
+          text: "You extract structured invoice data from documents. Preserve the invoice currency and totals exactly. Never convert currencies. Never compute monthly reimbursement. Return JSON only matching the schema.",
+        },
+      ],
+    },
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      temperature: 0,
+      responseMimeType: "application/json",
+      responseSchema: EXTRACTION_SCHEMA,
+    },
+  });
+
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body,
+      },
+    );
+
+    if (res.status === 503 || res.status === 429) {
+      const errBody = await res.text().catch(() => "");
+      lastError = new Error(`Gemini error ${res.status}: ${errBody.slice(0, 300)}`);
+      if (attempt < GEMINI_MAX_ATTEMPTS) {
+        await sleep(1000 * attempt);
+        continue;
+      }
+      throw lastError;
+    }
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "");
+      throw new Error(`Gemini error ${res.status}: ${errBody.slice(0, 300)}`);
+    }
+
+    const data = (await res.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
+    };
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!content) throw new Error("Empty Gemini response");
+
+    const parsed = JSON.parse(content) as InvoiceExtractionPayload;
+    return {
+      payload: normalizePayload(parsed, input.tool, input.employeeName),
+      confidence: 0.9,
+      model,
+    };
+  }
+
+  throw lastError ?? new Error("Gemini extraction failed");
 }
 
 function mockExtract(input: {
   fileName: string;
   tool: Tool;
   employeeName: string;
-}): ExtractionResult {
+}): Omit<ExtractionResult, "flags"> {
   const lower = input.fileName.toLowerCase();
   const profile = mockProfileForTool(input.tool, lower);
 
@@ -114,7 +249,8 @@ function mockProfileForTool(
   plan: string;
   amount: number;
 } {
-  const stamp = fileName.replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase() || "000001";
+  const stamp =
+    fileName.replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase() || "000001";
   const today = new Date();
   const y = today.getUTCFullYear();
   const m = today.getUTCMonth();
@@ -190,7 +326,7 @@ function normalizePayload(
     billing_cycle: parsed.billing_cycle ?? null,
     plan: parsed.plan ?? null,
     amount: parsed.amount ?? null,
-    currency: parsed.currency ?? "EUR",
+    currency: parsed.currency ? parsed.currency.toUpperCase() : "EUR",
     tax_amount: parsed.tax_amount ?? null,
     employee_name: parsed.employee_name ?? employeeName,
   };
@@ -207,4 +343,8 @@ function lastDay(year: number, monthIndex: number): number {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

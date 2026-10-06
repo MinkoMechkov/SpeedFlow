@@ -8,6 +8,8 @@ const CYCLE_MONTHS: Record<BillingCycle, number> = {
   other: 1,
 };
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 /** Deterministic monthly reimbursement from invoice amount + cycle/period. */
 export function calculateMonthlyCost(input: {
   amount: number;
@@ -19,7 +21,9 @@ export function calculateMonthlyCost(input: {
     return 0;
   }
 
-  const monthsFromPeriod = monthsBetweenInclusive(
+  // Prefer day-span months (Sep 27–Oct 27 ≈ 30 days → 1 month), not calendar
+  // month labels (which wrongly treat that as Sep+Oct = 2).
+  const monthsFromPeriod = monthsCoveredByPeriod(
     input.periodStart,
     input.periodEnd,
   );
@@ -32,6 +36,24 @@ export function calculateMonthlyCost(input: {
   return roundMoney(input.amount / divisor);
 }
 
+/**
+ * How many billing months a period covers, from day length (~30 days = 1 month).
+ * Example: 2026-09-27 → 2026-10-27 = 30 days → 1.
+ */
+export function monthsCoveredByPeriod(
+  start?: string | null,
+  end?: string | null,
+): number | null {
+  if (!start || !end) return null;
+  const s = parseDate(start);
+  const e = parseDate(end);
+  if (!s || !e || e < s) return null;
+
+  const days = Math.max(1, Math.round((e.getTime() - s.getTime()) / MS_PER_DAY));
+  return Math.max(1, Math.round(days / 30));
+}
+
+/** @deprecated Use monthsCoveredByPeriod — kept for tests/callers expecting calendar count. */
 export function monthsBetweenInclusive(
   start?: string | null,
   end?: string | null,
@@ -57,29 +79,50 @@ export function monthKey(date: Date | string): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-01`;
 }
 
+/**
+ * Months that receive the monthly cost on approve.
+ * Uses the same day-based month count as calculateMonthlyCost, starting at
+ * period start (so a 30-day Sep→Oct invoice posts to one month, not two).
+ */
+/** Last `count` calendar months ending at `end` (newest first). */
+export function recentMonthKeys(
+  count: number,
+  end: Date | string = new Date(),
+): string[] {
+  const endDate = typeof end === "string" ? parseDate(end) : end;
+  const base = endDate ?? new Date();
+  const cursor = new Date(
+    Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), 1),
+  );
+  const months: string[] = [];
+  const n = Math.max(1, Math.min(12, Math.floor(count)));
+  for (let i = 0; i < n; i++) {
+    months.push(monthKey(cursor));
+    cursor.setUTCMonth(cursor.getUTCMonth() - 1);
+  }
+  return months;
+}
+
 export function expandMonthsCovered(
   periodStart?: string | null,
   periodEnd?: string | null,
   fallbackMonth?: string | null,
 ): string[] {
-  if (periodStart && periodEnd) {
-    const start = parseDate(periodStart);
-    const end = parseDate(periodEnd);
-    if (start && end && end >= start) {
-      const months: string[] = [];
-      const cursor = new Date(
-        Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1),
-      );
-      const last = new Date(
-        Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1),
-      );
-      while (cursor <= last) {
-        months.push(monthKey(cursor));
-        cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-      }
-      return months;
+  const start = periodStart ? parseDate(periodStart) : null;
+  const count = monthsCoveredByPeriod(periodStart, periodEnd);
+
+  if (start && count) {
+    const months: string[] = [];
+    const cursor = new Date(
+      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1),
+    );
+    for (let i = 0; i < count; i++) {
+      months.push(monthKey(cursor));
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1);
     }
+    return months;
   }
+
   return [monthKey(fallbackMonth ?? new Date())];
 }
 

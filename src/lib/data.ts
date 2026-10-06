@@ -6,6 +6,7 @@ import {
 import { calculateMonthlyCost } from "@/lib/invoices/calculate";
 import { extractInvoiceData } from "@/lib/invoices/extract";
 import { validateInvoiceExtraction } from "@/lib/invoices/validate";
+import { guessMime } from "@/lib/mime";
 import { isDemoMode } from "@/lib/mode";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -27,6 +28,48 @@ export async function listTools(): Promise<Tool[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("tools").select("*").order("name");
   return (data ?? []) as Tool[];
+}
+
+export async function createTool(input: {
+  name: string;
+  vendor: string;
+}): Promise<Tool> {
+  const name = input.name.trim();
+  const vendor = input.vendor.trim() || name;
+  if (!name) throw new Error("Tool name is required");
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    const existing = store.tools.find(
+      (t) => t.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) return existing;
+    const tool: Tool = {
+      id: crypto.randomUUID(),
+      name,
+      vendor,
+      created_at: now(),
+    };
+    store.tools.push(tool);
+    return tool;
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("tools")
+    .select("*")
+    .ilike("name", name)
+    .limit(1)
+    .maybeSingle();
+  if (existing) return existing as Tool;
+
+  const { data, error } = await supabase
+    .from("tools")
+    .insert({ name, vendor })
+    .select("*")
+    .single();
+  if (error || !data) throw error ?? new Error("Failed to create tool");
+  return data as Tool;
 }
 
 export async function getMySubscriptions(
@@ -265,11 +308,21 @@ export async function getEmployeeDetail(employeeId: string) {
   };
 }
 
-export async function getReimbursementReport(month: string) {
+export async function getReimbursementReport(input: {
+  /** Inclusive lookback: 1 = current month only, 2 = this + previous, etc. */
+  months?: number;
+  /** End month (YYYY-MM-01). Defaults to current UTC month. */
+  endMonth?: string;
+}) {
+  const { recentMonthKeys } = await import("@/lib/invoices/calculate");
+  const span = Math.max(1, Math.min(3, Math.floor(input.months ?? 1)));
+  const months = recentMonthKeys(span, input.endMonth ?? new Date());
+  const monthSet = new Set(months);
+
   if (isDemoMode()) {
     const store = getDemoStore();
     const byEmployee = new Map<string, number>();
-    for (const cost of store.monthlyCosts.filter((m) => m.month === month)) {
+    for (const cost of store.monthlyCosts.filter((m) => monthSet.has(m.month))) {
       byEmployee.set(
         cost.employee_id,
         (byEmployee.get(cost.employee_id) ?? 0) + cost.amount,
@@ -282,26 +335,30 @@ export async function getReimbursementReport(month: string) {
         amount: byEmployee.get(e.id) ?? 0,
       }));
     const total = rows.reduce((sum, r) => sum + r.amount, 0);
-    return { month, rows, total };
+    return { months, span, rows, total };
   }
 
   const supabase = await createClient();
   const { data } = await supabase
     .from("monthly_costs")
     .select("*, employee:employees(*)")
-    .eq("month", month);
+    .in("month", months);
   const map = new Map<string, { employee: Employee; amount: number }>();
   for (const row of data ?? []) {
     const emp = row.employee as Employee;
+    if (!emp?.id) continue;
     const prev = map.get(emp.id);
     map.set(emp.id, {
       employee: emp,
       amount: (prev?.amount ?? 0) + Number(row.amount),
     });
   }
-  const rows = [...map.values()];
+  const rows = [...map.values()].sort((a, b) =>
+    a.employee.name.localeCompare(b.employee.name),
+  );
   return {
-    month,
+    months,
+    span,
     rows,
     total: rows.reduce((sum, r) => sum + r.amount, 0),
   };
@@ -339,6 +396,8 @@ export async function processInvoiceUpload(input: {
       fileName: input.fileName,
       tool,
       employeeName: input.session.employee.name,
+      fileBytes: input.fileBytes,
+      mimeType: guessMime(input.fileName),
     });
 
     const existingSub =
@@ -346,12 +405,17 @@ export async function processInvoiceUpload(input: {
         (s) => s.employee_id === employeeId && s.tool_id === tool.id,
       ) ?? null;
 
-    const flags = validateInvoiceExtraction({
-      employee: input.session.employee,
-      extraction: extraction.payload,
-      existingInvoices: store.invoices.filter((i) => i.employee_id === employeeId),
-      existingSubscription: existingSub,
-    });
+    const flags = [
+      ...validateInvoiceExtraction({
+        employee: input.session.employee,
+        extraction: extraction.payload,
+        existingInvoices: store.invoices.filter(
+          (i) => i.employee_id === employeeId,
+        ),
+        existingSubscription: existingSub,
+      }),
+      ...extraction.flags,
+    ];
 
     const amount = extraction.payload.amount ?? 0;
     const monthly = calculateMonthlyCost({
@@ -437,6 +501,8 @@ export async function processInvoiceUpload(input: {
     fileName: input.fileName,
     tool,
     employeeName: input.session.employee.name,
+    fileBytes: input.fileBytes,
+    mimeType: guessMime(input.fileName),
   });
 
   const { data: existingInvoices } = await supabase
@@ -450,12 +516,15 @@ export async function processInvoiceUpload(input: {
     .eq("tool_id", tool.id)
     .maybeSingle();
 
-  const flags = validateInvoiceExtraction({
-    employee: input.session.employee,
-    extraction: extraction.payload,
-    existingInvoices: (existingInvoices ?? []) as Invoice[],
-    existingSubscription: (existingSub as Subscription) ?? null,
-  });
+  const flags = [
+    ...validateInvoiceExtraction({
+      employee: input.session.employee,
+      extraction: extraction.payload,
+      existingInvoices: (existingInvoices ?? []) as Invoice[],
+      existingSubscription: (existingSub as Subscription) ?? null,
+    }),
+    ...extraction.flags,
+  ];
 
   const amount = extraction.payload.amount ?? 0;
   const monthly = calculateMonthlyCost({
@@ -726,10 +795,3 @@ export async function reviewInvoice(input: {
   return invoice as Invoice;
 }
 
-function guessMime(fileName: string): string {
-  const lower = fileName.toLowerCase();
-  if (lower.endsWith(".png")) return "image/png";
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-  if (lower.endsWith(".webp")) return "image/webp";
-  return "application/pdf";
-}

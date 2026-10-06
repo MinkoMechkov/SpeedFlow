@@ -10,5 +10,5 @@ export function isDemoMode(): boolean {
 }
 
 export function hasLlmKey(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY);
+  return Boolean(process.env.GEMINI_API_KEY);
 }

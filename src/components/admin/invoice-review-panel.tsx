@@ -142,6 +142,13 @@ export function InvoiceReviewPanel({ invoice }: { invoice: Invoice }) {
                   billing_cycle: (v ?? "monthly") as BillingCycle,
                 }))
               }
+              items={{
+                monthly: "monthly",
+                quarterly: "quarterly",
+                yearly: "yearly",
+                semi_annual: "semi_annual",
+                other: "other",
+              }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue />

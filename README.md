@@ -9,7 +9,7 @@ Internal platform for employee tool subscriptions and invoice reimbursements.
 - Next.js (App Router) + TypeScript + Tailwind + shadcn/ui
 - Supabase Auth, PostgreSQL, Storage, RLS
 - Deterministic monthly-cost math in app code
-- Mock AI extraction when no `OPENAI_API_KEY`
+- Mock AI extraction when no `GEMINI_API_KEY`
 - In-memory **demo mode** when `DEMO_MODE=true` (or Supabase env vars missing)
 
 ## Quick start (demo)
@@ -49,7 +49,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 3. Create Auth users and matching `employees` rows (`user_id`, `role` = `employee` | `admin`)
-4. Optional: `OPENAI_API_KEY` for live LLM extraction
+4. Optional: `GEMINI_API_KEY` for live Gemini extraction (PDF/image)
 
 Schema includes RLS so employees only read/upload their own data; admins see company-wide records. Invoice ownership is always derived from the authenticated session — never from the client payload.
 
@@ -64,5 +64,5 @@ Schema includes RLS so employees only read/upload their own data; admins see com
 ## What’s mocked
 
 - **Demo auth + data store** when `DEMO_MODE=true`
-- **AI extraction** when `OPENAI_API_KEY` is unset (deterministic mock JSON)
+- **AI extraction** when `GEMINI_API_KEY` is unset (deterministic mock JSON)
 - File storage uses Supabase Storage when not in demo mode; demo stores a virtual path only
