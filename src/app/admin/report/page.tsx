@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MarkPaidButton } from "@/components/admin/mark-paid-button";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
@@ -62,12 +63,15 @@ export default async function AdminReportPage({
             {rangeLabel}.
           </p>
         </div>
-        <Link
-          href={`/api/report/csv?months=${span}`}
-          className={cn(buttonVariants())}
-        >
-          Export CSV
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <MarkPaidButton months={span} unpaidTotal={report.unpaidTotal} />
+          <Link
+            href={`/api/report/csv?months=${span}`}
+            className={cn(buttonVariants())}
+          >
+            Export CSV
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -88,13 +92,25 @@ export default async function AdminReportPage({
         })}
       </div>
 
-      <div className="rounded-xl border border-border/80 bg-[color-mix(in_oklab,var(--brand)_8%,white)] p-6">
-        <p className="text-sm text-muted-foreground">
-          Company total ({span === 1 ? "1 month" : `${span} months`})
-        </p>
-        <p className="mt-1 font-[family-name:var(--font-display)] text-4xl tabular-nums text-[var(--brand-deep)]">
-          {formatEur(report.total)}
-        </p>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-border/80 bg-[color-mix(in_oklab,var(--brand)_8%,white)] p-5">
+          <p className="text-sm text-muted-foreground">Company total</p>
+          <p className="mt-1 font-[family-name:var(--font-display)] text-3xl tabular-nums text-[var(--brand-deep)]">
+            {formatEur(report.total)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-card/60 p-5">
+          <p className="text-sm text-muted-foreground">Unpaid (approved)</p>
+          <p className="mt-1 font-[family-name:var(--font-display)] text-3xl tabular-nums">
+            {formatEur(report.unpaidTotal)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-border/80 bg-card/60 p-5">
+          <p className="text-sm text-muted-foreground">Already paid</p>
+          <p className="mt-1 font-[family-name:var(--font-display)] text-3xl tabular-nums">
+            {formatEur(report.paidTotal)}
+          </p>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border/80 bg-card/60">
@@ -102,22 +118,28 @@ export default async function AdminReportPage({
           <TableHeader>
             <TableRow>
               <TableHead>Employee</TableHead>
-              <TableHead className="text-right">
-                {span === 1 ? "Monthly reimbursement" : "Reimbursement total"}
-              </TableHead>
+              <TableHead className="text-right">Unpaid</TableHead>
+              <TableHead className="text-right">Paid</TableHead>
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {report.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={2} className="text-muted-foreground">
-                  No approved monthly costs in this range.
+                <TableCell colSpan={4} className="text-muted-foreground">
+                  No monthly costs in this range.
                 </TableCell>
               </TableRow>
             ) : (
               report.rows.map((row) => (
                 <TableRow key={row.employee.id}>
                   <TableCell>{row.employee.name}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatEur(row.approvedAmount)}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatEur(row.paidAmount)}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatEur(row.amount)}
                   </TableCell>
@@ -126,6 +148,12 @@ export default async function AdminReportPage({
             )}
             <TableRow>
               <TableCell className="font-semibold">Total</TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
+                {formatEur(report.unpaidTotal)}
+              </TableCell>
+              <TableCell className="text-right font-semibold tabular-nums">
+                {formatEur(report.paidTotal)}
+              </TableCell>
               <TableCell className="text-right font-semibold tabular-nums">
                 {formatEur(report.total)}
               </TableCell>

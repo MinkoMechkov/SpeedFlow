@@ -39,19 +39,26 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127), go to **Login**, and pick
 
 ## Supabase mode
 
-1. Create a Supabase project and apply `supabase/migrations/20261005120000_spendflow_initial_schema.sql`
+1. Create a Supabase project and apply migrations under `supabase/migrations/`
 2. Set in `.env.local`:
 
 ```env
 DEMO_MODE=false
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+# Optional: used for password-reset email links (defaults to request origin)
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:43127
 ```
 
-3. Create Auth users and matching `employees` rows (`user_id`, `role` = `employee` | `admin`)
-4. Optional: `GEMINI_API_KEY` for live Gemini extraction (PDF/image)
+3. **Auth (internal MVP):** In Supabase Dashboard → Authentication → Providers → Email, **disable “Confirm email”** so home-page registration can sign in immediately. Self-signup always creates `employees.role = employee`; only admins can promote admins in-app.
+4. Optional: seed an admin Auth user + matching `employees` row (`role = admin`)
+5. Optional: `GEMINI_API_KEY` (+ `GEMINI_MODEL`) for live Gemini extraction
 
 Schema includes RLS so employees only read/upload their own data; admins see company-wide records. Invoice ownership is always derived from the authenticated session — never from the client payload.
+
+Password reset: Login → Forgot password → email link → `/auth/callback` → `/login/reset`.
+In Supabase Dashboard → Authentication → URL Configuration, allow redirect URLs for
+`http://127.0.0.1:43127/auth/callback` (and your production origin).
 
 ## Scripts
 
@@ -64,5 +71,5 @@ Schema includes RLS so employees only read/upload their own data; admins see com
 ## What’s mocked
 
 - **Demo auth + data store** when `DEMO_MODE=true`
-- **AI extraction** when `GEMINI_API_KEY` is unset (deterministic mock JSON)
+- **AI extraction** when `GEMINI_API_KEY` is unset (deterministic mock JSON). With a key set, failed Gemini calls error the upload instead of silently mocking.
 - File storage uses Supabase Storage when not in demo mode; demo stores a virtual path only

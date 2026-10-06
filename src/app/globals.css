@@ -49,41 +49,41 @@
 }
 
 :root {
-  --brand: #0f6a62;
-  --brand-deep: #0b4f49;
-  --ink: #14201f;
-  --background: #f3f6f4;
-  --foreground: #14201f;
+  --brand: #b1be89;
+  --brand-deep: #8f9c6a;
+  --ink: #1c2414;
+  --background: #f7f8f3;
+  --foreground: #1c2414;
   --card: #ffffffcc;
-  --card-foreground: #14201f;
+  --card-foreground: #1c2414;
   --popover: #ffffff;
-  --popover-foreground: #14201f;
-  --primary: #0f6a62;
-  --primary-foreground: #f4fffc;
-  --secondary: #dce8e4;
-  --secondary-foreground: #14201f;
-  --muted: #e4ebe8;
-  --muted-foreground: #5b6b67;
-  --accent: #d7efe8;
-  --accent-foreground: #0b4f49;
+  --popover-foreground: #1c2414;
+  --primary: #b1be89;
+  --primary-foreground: #1c2414;
+  --secondary: #e8ecd9;
+  --secondary-foreground: #1c2414;
+  --muted: #eef1e4;
+  --muted-foreground: #5c6550;
+  --accent: #e4ebcf;
+  --accent-foreground: #1c2414;
   --destructive: #b42318;
-  --border: #c9d6d1;
-  --input: #c9d6d1;
-  --ring: #0f6a62;
-  --chart-1: #0f6a62;
-  --chart-2: #2f8f7b;
+  --border: #d4dbc4;
+  --input: #d4dbc4;
+  --ring: #b1be89;
+  --chart-1: #b1be89;
+  --chart-2: #8f9c6a;
   --chart-3: #c4a35a;
   --chart-4: #3d5a80;
   --chart-5: #8a6f5c;
   --radius: 0.625rem;
-  --sidebar: #eef4f1;
-  --sidebar-foreground: #14201f;
-  --sidebar-primary: #0f6a62;
-  --sidebar-primary-foreground: #f4fffc;
-  --sidebar-accent: #dce8e4;
-  --sidebar-accent-foreground: #14201f;
-  --sidebar-border: #c9d6d1;
-  --sidebar-ring: #0f6a62;
+  --sidebar: #f0f3e8;
+  --sidebar-foreground: #1c2414;
+  --sidebar-primary: #b1be89;
+  --sidebar-primary-foreground: #1c2414;
+  --sidebar-accent: #e8ecd9;
+  --sidebar-accent-foreground: #1c2414;
+  --sidebar-border: #d4dbc4;
+  --sidebar-ring: #b1be89;
 }
 
 @layer base {
@@ -93,9 +93,9 @@
   body {
     @apply bg-background text-foreground;
     background-image:
-      radial-gradient(1200px 500px at 10% -10%, #cce7df 0%, transparent 55%),
-      radial-gradient(900px 420px at 100% 0%, #e7efd8 0%, transparent 50%),
-      linear-gradient(180deg, #f7faf8 0%, #eef3f0 100%);
+      radial-gradient(1200px 500px at 10% -10%, #dce4c4 0%, transparent 55%),
+      radial-gradient(900px 420px at 100% 0%, #ebe6d4 0%, transparent 50%),
+      linear-gradient(180deg, #fafbf6 0%, #f1f3ea 100%);
     background-attachment: fixed;
   }
   html {

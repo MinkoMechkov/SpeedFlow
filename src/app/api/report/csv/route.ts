@@ -23,12 +23,12 @@ export async function GET(request: Request) {
     .join("_to_");
 
   const lines = [
-    "Employee,Email,Department,Reimbursement (EUR)",
+    "Employee,Email,Department,Unpaid (EUR),Paid (EUR),Total (EUR)",
     ...report.rows.map(
       (r) =>
-        `"${r.employee.name}","${r.employee.email}","${r.employee.department ?? ""}",${r.amount.toFixed(2)}`,
+        `"${r.employee.name}","${r.employee.email}","${r.employee.department ?? ""}",${r.approvedAmount.toFixed(2)},${r.paidAmount.toFixed(2)},${r.amount.toFixed(2)}`,
     ),
-    `"Total",,,${report.total.toFixed(2)}`,
+    `"Total",,,${report.unpaidTotal.toFixed(2)},${report.paidTotal.toFixed(2)},${report.total.toFixed(2)}`,
   ];
 
   return new NextResponse(lines.join("\n"), {

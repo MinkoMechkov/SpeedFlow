@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Manrope } from "next/font/google";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -25,8 +26,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${display.variable} ${body.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-[family-name:var(--font-body)]">
+      <body className="flex min-h-full flex-col font-[family-name:var(--font-body)]">
         {children}
+        <SiteFooter />
         <Toaster />
       </body>
     </html>

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { EmployeeManageForm } from "@/components/admin/employee-manage-form";
 import {
   Table,
   TableBody,
@@ -8,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
+import { SubscriptionStatusActions } from "@/components/subscription-status-actions";
 import { requireAdmin } from "@/lib/auth";
 import { getEmployeeDetail } from "@/lib/data";
 import { formatEur } from "@/lib/invoices/calculate";
@@ -33,11 +35,20 @@ export default async function AdminEmployeeDetailPage({
           {detail.employee.department
             ? ` · ${detail.employee.department}`
             : ""}
+          {" · "}
+          <span className="capitalize">{detail.employee.role}</span>
+          {detail.employee.active ? "" : " · inactive"}
         </p>
       </div>
 
+      <EmployeeManageForm employee={detail.employee} />
+
       <section className="space-y-3">
         <h2 className="text-lg font-medium">Subscriptions</h2>
+        <p className="text-sm text-muted-foreground">
+          Pause or cancel does not rewrite historical monthly costs — only
+          ongoing reimbursement projection going forward.
+        </p>
         <div className="overflow-x-auto rounded-xl border border-border/80 bg-card/60">
           <Table>
             <TableHeader>
@@ -47,6 +58,7 @@ export default async function AdminEmployeeDetailPage({
                 <TableHead>Cycle</TableHead>
                 <TableHead className="text-right">Monthly</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,6 +74,12 @@ export default async function AdminEmployeeDetailPage({
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={sub.status} />
+                  </TableCell>
+                  <TableCell>
+                    <SubscriptionStatusActions
+                      subscriptionId={sub.id}
+                      status={sub.status}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

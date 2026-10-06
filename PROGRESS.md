@@ -13,10 +13,12 @@ Last reviewed: 2026-10-06
 | Local `npm install` + `npm run dev` | Done | Port `43127` |
 | `.env.local` with Supabase project | Done | `DEMO_MODE=false`, project `spendflow` |
 | Supabase project healthy | Done | Schema migration applied, RLS on |
-| Auth users + `employees` rows | Done | Ana (admin), Ivan & Maria (employees) |
-| Seeded subscriptions / invoices in Supabase | Not done | DB mostly empty beyond tools + users |
-| `GEMINI_API_KEY` for live extraction | Done | Uses `gemini-3.8-flash`; mock when unset / API error |
+| Auth users + `employees` rows | Done | Ana (admin), Ivan, Maria, Minko (employees) |
+| Seeded subscriptions / invoices in Supabase | Partial | Real uploads exist; no bulk seed script |
+| `GEMINI_API_KEY` for live extraction | Done | Default `gemini-3.1-flash-lite` (faster); mock only if key unset |
 | Demo mode walkthrough | Done (available) | Set `DEMO_MODE=true` to use in-memory seed |
+| Public registration | Done | Home page form; always creates `employee` |
+| Confirm email disabled (MVP) | Manual | Dashboard → Auth → Email → disable “Confirm email” (see README) |
 
 **Login (Supabase mode)**
 
@@ -36,14 +38,18 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Employee invoice upload API (session ownership, not client-supplied owner)
 - [x] Extraction pipeline (mock by default; Gemini path if `GEMINI_API_KEY` set)
 - [x] Validation flags (duplicate, name mismatch, price change, missing fields, etc.)
+- [x] Flag descriptions UI (“Review notes” with tone + plain-language copy)
 - [x] Deterministic monthly-cost calculation (app code)
+- [x] Fixed USD→EUR company rate `0.8616` (same $ amount → same € every time)
 - [x] Admin review: approve / edit / reject + audit log
 - [x] Monthly reimbursement report + CSV export
 - [x] Document AI via Gemini (PDF/image bytes + structured JSON; mock without key)
-- [ ] Invoice file preview / download in UI
+- [x] Invoice file preview / download on admin review (signed Storage URLs)
+- [x] Employee invoice file preview (own files)
+- [x] Mark reimbursements as paid (admin report range)
+- [x] Pause / cancel / reactivate subscriptions (API + UI + audit; historical monthly_costs unchanged)
+- [x] Live admin pending queue (poll + toast + refresh when count changes)
 - [ ] Async extraction with `uploaded` / `extracting` status polling
-- [ ] Mark reimbursements as paid
-- [ ] Pause / cancel subscription product flows
 
 ---
 
@@ -51,23 +57,29 @@ Upload → Analyze → Review → Calculate → Report
 
 - [x] Demo auth (cookie + persona picker when `DEMO_MODE=true`)
 - [x] Supabase email/password login
+- [x] Public registration on index (always `role=employee`)
 - [x] Middleware protection for `/employee` and `/admin`
 - [x] Role resolution via `employees.user_id` (`employee` \| `admin`)
 - [x] RLS policies in migration (own data vs admin company-wide)
-- [ ] Admin lands on admin dashboard after Supabase login (always redirects to employee subscriptions today)
-- [ ] Signup / invite / password-reset flows
-- [ ] OAuth / magic link / MFA
+- [x] Admin lands on `/admin` after Supabase login (employees → subscriptions)
+- [x] Only admins can promote/set admin role in-app
+- [x] Password reset (Forgot password → email → `/auth/callback` → `/login/reset`)
+- [x] Login / reset “Back to home” link
+- [ ] Magic link / OAuth / MFA
+
+**Auth MVP note:** Disable Supabase “Confirm email” so register → immediate login. Password reset requires redirect URL allowlist for `/auth/callback`.
 
 ---
 
 ## Employee UI
 
 - [x] Subscriptions list (+ empty state)
+- [x] Pause / cancel / reactivate on own subscriptions
 - [x] Invoices list (+ empty state)
-- [x] Upload form
+- [x] Upload form (+ custom tool)
 - [x] Reimbursement (current month)
-- [ ] Create / edit own subscription UI (beyond review-driven upsert)
-- [ ] File viewer for uploaded invoices
+- [x] Invoice detail + file viewer + review notes
+- [ ] Create / edit own subscription fields beyond status (plan, dates, etc.)
 
 ---
 
@@ -76,11 +88,24 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Dashboard (KPIs, pending queue, employees overview, audit snippet)
 - [x] Pending invoice reviews + detail approve/edit/reject
 - [x] Employees list + employee detail
-- [x] Report page + CSV download
-- [ ] Invoice history (approved / rejected / all — pending queue only today)
+- [x] Employee manage form (name, department, role, active)
+- [x] Subscription lifecycle actions on employee detail
+- [x] Report page + CSV download + mark paid
+- [x] Invoice history filters (pending / approved / rejected / all)
 - [x] Report range picker (1 / 2 / 3 months)
-- [ ] Employee / role / tool management CRUD
+- [x] Tool catalog CRUD (`/admin/tools`; delete blocked if referenced)
+- [x] Pending-count watcher toast on new uploads / remote reviews
 - [ ] Demo store reset UI/API
+
+---
+
+## UX / polish
+
+- [x] Sage primary `rgb(177, 190, 137)` / `#b1be89` theme
+- [x] Modern home hero (flow steps + carded register)
+- [x] Page transition via `src/app/template.tsx`
+- [x] Site footer (typographic SpendFlow credit)
+- [x] Parallelize admin employee-overview queries
 
 ---
 
@@ -89,29 +114,33 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Next.js App Router + TypeScript + Tailwind + shadcn/ui
 - [x] Dual data layer (`demo` ↔ Supabase) in `src/lib/data.ts`
 - [x] Initial schema migration (tables, enums, RLS, storage bucket `invoices`, tools seed)
+- [x] Auth signup → employee trigger + self-insert policy
+- [x] Employees may update own subscription status (RLS)
 - [x] Demo seed data (personas, subs, pending invoices)
 - [x] Calc unit test (`npm run test:calc`)
+- [x] Signed URL helpers for invoice file access (`src/lib/storage.ts`)
+- [x] Flag catalog (`src/lib/invoices/flags.ts`)
 - [ ] Supabase seed for subscriptions / sample invoices
 - [ ] Local Supabase CLI config / automated migrate in CI
 - [ ] Broader tests (validate, extract, APIs, RLS, e2e)
-- [ ] Storage DELETE policy; signed URL helpers for file access
+- [ ] Storage DELETE policy
 
 ---
 
 ## Known gaps / quirks
 
-1. **Extraction quality** — Gemini reads PDF/image bytes; on 503/failure it falls back to mock (`mock_extraction_used` flag, lower confidence). Non-EUR amounts are converted to EUR in app code (Frankfurter/ECB).
-2. **Demo vs Supabase upload** — demo may create a pending subscription on upload; Supabase waits until admin approve (employees cannot insert subscriptions under RLS).
-3. **Empty company in Supabase** — after wiring Auth users, there is little transactional data until someone uploads/reviews.
-4. **Middleware deprecation** — Next.js warns that `middleware` should migrate to `proxy`.
+1. **Extraction** — Uses `gemini-3.1-flash-lite` by default. Mock only when no API key. If the key is set and Gemini fails/times out, upload errors instead of inventing fake fields.
+2. **USD→EUR** — Fixed company rate `0.8616` (not live FX). Other currencies still use Frankfurter with static fallback. Existing DB rows keep old converted amounts until re-upload/re-review.
+3. **Demo vs Supabase upload** — demo may create a pending subscription on upload; Supabase waits until admin approve. File preview / registration / password reset unavailable in demo.
+4. **Email confirmation** — must be disabled in Supabase Dashboard for immediate register→login (documented in README). Not configurable from app code.
+5. **Middleware deprecation** — Next.js warns that `middleware` should migrate to `proxy`.
 
 ---
 
 ## Suggested next work (priority)
 
-1. Seed realistic subscriptions/invoices in Supabase (or a seed script) so admin/employee UIs are not empty.
-2. Fix Supabase post-login redirect by role (admin → `/admin`).
-3. Invoice file preview on review.
-4. Admin invoice history + report month picker.
-5. Expand tests beyond calc.
-}
+1. Seed script for sample Supabase data
+2. Expand tests beyond calc (validate, flags, FX)
+3. Async extraction status polling
+4. Middleware → proxy migration
+5. OAuth / MFA if needed beyond email/password

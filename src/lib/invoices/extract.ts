@@ -10,7 +10,10 @@ export type ExtractionResult = {
 };
 
 const MAX_INLINE_BYTES = 15 * 1024 * 1024;
-const GEMINI_MAX_ATTEMPTS = 3;
+/** One retry only — long 503 backoff made uploads feel stuck. */
+const GEMINI_MAX_ATTEMPTS = 2;
+const GEMINI_TIMEOUT_MS = 25_000;
+const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 
 const EXTRACTION_SCHEMA = {
   type: "object",
@@ -49,9 +52,9 @@ const EXTRACTION_SCHEMA = {
 } as const;
 
 /**
- * AI extraction with mock fallback when GEMINI_API_KEY is absent.
+ * AI extraction. Mock only when GEMINI_API_KEY is unset.
+ * When a key is set, failures surface to the caller (no silent fake invoices).
  * Money fields are normalized to EUR in app code (not by the model).
- * Returns structured JSON only — never calculates reimbursement.
  */
 export async function extractInvoiceData(input: {
   fileName: string;
@@ -60,22 +63,13 @@ export async function extractInvoiceData(input: {
   fileBytes?: ArrayBuffer;
   mimeType?: string;
 }): Promise<ExtractionResult> {
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const result = await extractWithGemini(input);
-      return await finalizeInEur(result);
-    } catch (error) {
-      console.warn("LLM extraction failed, using mock fallback", error);
-      const mock = mockExtract(input);
-      return {
-        ...mock,
-        confidence: Math.min(mock.confidence, 0.45),
-        flags: ["mock_extraction_used"],
-      };
-    }
+  if (!process.env.GEMINI_API_KEY) {
+    const mock = mockExtract(input);
+    return { ...mock, flags: ["mock_extraction_used"] };
   }
-  const mock = mockExtract(input);
-  return { ...mock, flags: ["mock_extraction_used"] };
+
+  const result = await extractWithGemini(input);
+  return await finalizeInEur(result);
 }
 
 async function finalizeInEur(
@@ -110,7 +104,7 @@ async function extractWithGemini(input: {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY missing");
 
-  const model = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
+  const model = process.env.GEMINI_MODEL ?? DEFAULT_MODEL;
   const prompt = `Extract invoice fields from the attached document (or filename if no document).
 Tool context: ${input.tool.name} (${input.tool.vendor}). Expected employee: ${input.employeeName}. File name: ${input.fileName}.
 Rules:
@@ -128,17 +122,16 @@ Rules:
 
   if (input.fileBytes && input.fileBytes.byteLength > 0) {
     if (input.fileBytes.byteLength > MAX_INLINE_BYTES) {
-      console.warn(
-        `Invoice file ${input.fileName} exceeds ${MAX_INLINE_BYTES} bytes; skipping inline Gemini attachment`,
+      throw new Error(
+        `Invoice file exceeds ${MAX_INLINE_BYTES} bytes; compress or upload a smaller file`,
       );
-    } else {
-      parts.push({
-        inline_data: {
-          mime_type: input.mimeType ?? "application/pdf",
-          data: Buffer.from(input.fileBytes).toString("base64"),
-        },
-      });
     }
+    parts.push({
+      inline_data: {
+        mime_type: input.mimeType ?? "application/pdf",
+        data: Buffer.from(input.fileBytes).toString("base64"),
+      },
+    });
   }
 
   parts.push({ text: prompt });
@@ -156,52 +149,76 @@ Rules:
       temperature: 0,
       responseMimeType: "application/json",
       responseSchema: EXTRACTION_SCHEMA,
+      // Faster multimodal processing for invoice scans/PDFs.
+      mediaResolution: "MEDIA_RESOLUTION_LOW",
     },
   });
 
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= GEMINI_MAX_ATTEMPTS; attempt++) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          body,
+          signal: controller.signal,
         },
-        body,
-      },
-    );
+      );
 
-    if (res.status === 503 || res.status === 429) {
-      const errBody = await res.text().catch(() => "");
-      lastError = new Error(`Gemini error ${res.status}: ${errBody.slice(0, 300)}`);
-      if (attempt < GEMINI_MAX_ATTEMPTS) {
-        await sleep(1000 * attempt);
-        continue;
+      if (res.status === 503 || res.status === 429) {
+        const errBody = await res.text().catch(() => "");
+        lastError = new Error(
+          `Gemini busy (${res.status}). Try again in a moment.`,
+        );
+        console.warn(lastError.message, errBody.slice(0, 200));
+        if (attempt < GEMINI_MAX_ATTEMPTS) {
+          await sleep(400 * attempt);
+          continue;
+        }
+        throw lastError;
       }
-      throw lastError;
+
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => "");
+        throw new Error(
+          `Gemini error ${res.status}: ${errBody.slice(0, 300)}`,
+        );
+      }
+
+      const data = (await res.json()) as {
+        candidates?: Array<{
+          content?: { parts?: Array<{ text?: string }> };
+        }>;
+      };
+      const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!content) throw new Error("Empty Gemini response");
+
+      const parsed = JSON.parse(content) as InvoiceExtractionPayload;
+      return {
+        payload: normalizePayload(parsed, input.tool, input.employeeName),
+        confidence: 0.9,
+        model,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        lastError = new Error(
+          `Gemini timed out after ${GEMINI_TIMEOUT_MS / 1000}s`,
+        );
+      } else {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+      if (attempt >= GEMINI_MAX_ATTEMPTS) throw lastError;
+      await sleep(400 * attempt);
+    } finally {
+      clearTimeout(timer);
     }
-
-    if (!res.ok) {
-      const errBody = await res.text().catch(() => "");
-      throw new Error(`Gemini error ${res.status}: ${errBody.slice(0, 300)}`);
-    }
-
-    const data = (await res.json()) as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-      }>;
-    };
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) throw new Error("Empty Gemini response");
-
-    const parsed = JSON.parse(content) as InvoiceExtractionPayload;
-    return {
-      payload: normalizePayload(parsed, input.tool, input.employeeName),
-      confidence: 0.9,
-      model,
-    };
   }
 
   throw lastError ?? new Error("Gemini extraction failed");

@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
+import { SubscriptionStatusActions } from "@/components/subscription-status-actions";
 import { requireSession } from "@/lib/auth";
 import { getMySubscriptions } from "@/lib/data";
 import { formatEur } from "@/lib/invoices/calculate";
@@ -22,7 +23,9 @@ export default async function SubscriptionsPage() {
           My subscriptions
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Tools billed to you and their calculated monthly reimbursement.
+          Tools billed to you and their calculated monthly reimbursement. Pause
+          or cancel only affects ongoing reimbursement going forward — historical
+          monthly costs stay as recorded.
         </p>
       </div>
 
@@ -40,6 +43,7 @@ export default async function SubscriptionsPage() {
                 <TableHead>Billing cycle</TableHead>
                 <TableHead className="text-right">Monthly cost</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -57,6 +61,12 @@ export default async function SubscriptionsPage() {
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={sub.status} />
+                  </TableCell>
+                  <TableCell>
+                    <SubscriptionStatusActions
+                      subscriptionId={sub.id}
+                      status={sub.status}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

@@ -8,7 +8,13 @@ export default function LoginPage() {
   const demoUsers = demoMode ? getDemoStore().employees : [];
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-12">
+      <Link
+        href="/"
+        className="mb-4 text-sm text-muted-foreground transition hover:text-[var(--brand)]"
+      >
+        ← Back to home
+      </Link>
       <Link
         href="/"
         className="font-[family-name:var(--font-display)] text-3xl text-[var(--brand)]"

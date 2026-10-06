@@ -16,6 +16,8 @@ import {
 } from "@/lib/data";
 import { formatEur } from "@/lib/invoices/calculate";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const [kpis, overview, pending, audits] = await Promise.all([

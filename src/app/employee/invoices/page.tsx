@@ -51,6 +51,7 @@ export default async function EmployeeInvoicesPage() {
                 <TableHead>Amount</TableHead>
                 <TableHead>Monthly</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -68,6 +69,14 @@ export default async function EmployeeInvoicesPage() {
                   </TableCell>
                   <TableCell>
                     <StatusBadge status={inv.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Link
+                      href={`/employee/invoices/${inv.id}`}
+                      className="text-sm text-[var(--brand)]"
+                    >
+                      Open
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

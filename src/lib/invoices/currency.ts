@@ -1,6 +1,11 @@
-/** Fallback rates → EUR when the FX API is unavailable (approx. ECB mid). */
+/**
+ * Company-fixed USD→EUR rate (EUR per 1 USD).
+ * Used for every USD invoice so the same dollar amount always yields the same EUR.
+ */
+export const USD_TO_EUR = 0.8616;
+
+/** Fallback rates → EUR when the FX API is unavailable (non-USD). */
 const FALLBACK_TO_EUR: Record<string, number> = {
-  USD: 0.92,
   GBP: 1.17,
   CHF: 1.05,
 };
@@ -17,7 +22,8 @@ export type EurConversion = {
 
 /**
  * Convert invoice money fields to EUR. Identity when already EUR.
- * Uses Frankfurter (ECB) rates; falls back to static rates if the API fails.
+ * USD always uses the fixed company rate. Other currencies use Frankfurter (ECB)
+ * with static fallbacks if the API fails.
  */
 export async function convertExtractionToEur(input: {
   amount: number | null;
@@ -35,6 +41,20 @@ export async function convertExtractionToEur(input: {
       originalCurrency: null,
       rate: 1,
     };
+  }
+
+  if (currency === "USD") {
+    return applyRate({
+      amount: input.amount,
+      tax_amount: input.tax_amount,
+      currency,
+      rate: USD_TO_EUR,
+      flags: [
+        "converted_from_USD",
+        `fx_rate_${USD_TO_EUR.toFixed(4)}`,
+        "fx_rate_fixed",
+      ],
+    });
   }
 
   const { rate, usedFallback } = await fetchRateToEur(
@@ -55,14 +75,30 @@ export async function convertExtractionToEur(input: {
   const flags = [`converted_from_${currency}`, `fx_rate_${rate.toFixed(4)}`];
   if (usedFallback) flags.push("fx_rate_fallback");
 
-  return {
-    amount: input.amount == null ? null : round2(input.amount * rate),
-    tax_amount:
-      input.tax_amount == null ? null : round2(input.tax_amount * rate),
-    currency: "EUR",
-    flags,
-    originalCurrency: currency,
+  return applyRate({
+    amount: input.amount,
+    tax_amount: input.tax_amount,
+    currency,
     rate,
+    flags,
+  });
+}
+
+function applyRate(input: {
+  amount: number | null;
+  tax_amount: number | null;
+  currency: string;
+  rate: number;
+  flags: string[];
+}): EurConversion {
+  return {
+    amount: input.amount == null ? null : round2(input.amount * input.rate),
+    tax_amount:
+      input.tax_amount == null ? null : round2(input.tax_amount * input.rate),
+    currency: "EUR",
+    flags: input.flags,
+    originalCurrency: input.currency,
+    rate: input.rate,
   };
 }
 

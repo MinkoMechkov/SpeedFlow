@@ -22,7 +22,8 @@ export default async function AdminEmployeesPage() {
           Employees
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Open an employee to inspect subscriptions and invoices.
+          Open an employee to manage role/active status and inspect
+          subscriptions. New self-registrations always start as employees.
         </p>
       </div>
       <div className="overflow-x-auto rounded-xl border border-border/80 bg-card/60">
@@ -30,7 +31,9 @@ export default async function AdminEmployeesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Employee</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Department</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Active tools</TableHead>
               <TableHead className="text-right">Monthly cost</TableHead>
               <TableHead className="text-right">Pending</TableHead>
@@ -50,7 +53,11 @@ export default async function AdminEmployeesPage() {
                     {row.employee.email}
                   </p>
                 </TableCell>
+                <TableCell className="capitalize">{row.employee.role}</TableCell>
                 <TableCell>{row.employee.department ?? "—"}</TableCell>
+                <TableCell>
+                  {row.employee.active ? "Active" : "Inactive"}
+                </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {row.activeTools}
                 </TableCell>

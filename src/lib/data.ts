@@ -72,6 +72,173 @@ export async function createTool(input: {
   return data as Tool;
 }
 
+export async function updateTool(input: {
+  session: SessionUser;
+  toolId: string;
+  patch: { name?: string; vendor?: string };
+}): Promise<Tool> {
+  if (input.session.employee.role !== "admin") {
+    throw new Error("Forbidden");
+  }
+  const name = input.patch.name?.trim();
+  const vendor = input.patch.vendor?.trim();
+  if (name !== undefined && !name) throw new Error("Tool name is required");
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    const tool = store.tools.find((t) => t.id === input.toolId);
+    if (!tool) throw new Error("Tool not found");
+    if (name != null) tool.name = name;
+    if (vendor != null) tool.vendor = vendor || tool.name;
+    return tool;
+  }
+
+  const supabase = await createClient();
+  const payload: Record<string, unknown> = {};
+  if (name != null) payload.name = name;
+  if (vendor != null) payload.vendor = vendor || name;
+
+  const { data, error } = await supabase
+    .from("tools")
+    .update(payload)
+    .eq("id", input.toolId)
+    .select("*")
+    .single();
+  if (error || !data) throw error ?? new Error("Update failed");
+
+  await supabase.from("audit_logs").insert({
+    user_id: input.session.employee.user_id,
+    employee_id: input.session.employee.id,
+    action: "tool_updated",
+    entity_type: "tool",
+    entity_id: input.toolId,
+    metadata: input.patch,
+  });
+
+  return data as Tool;
+}
+
+export async function deleteTool(input: {
+  session: SessionUser;
+  toolId: string;
+}): Promise<void> {
+  if (input.session.employee.role !== "admin") {
+    throw new Error("Forbidden");
+  }
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    const usedBySub = store.subscriptions.some((s) => s.tool_id === input.toolId);
+    const usedByInv = store.invoices.some((i) => i.tool_id === input.toolId);
+    if (usedBySub || usedByInv) {
+      throw new Error(
+        "Cannot delete a tool that is referenced by subscriptions or invoices.",
+      );
+    }
+    const idx = store.tools.findIndex((t) => t.id === input.toolId);
+    if (idx < 0) throw new Error("Tool not found");
+    store.tools.splice(idx, 1);
+    return;
+  }
+
+  const supabase = await createClient();
+  const [{ count: subCount }, { count: invCount }] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("tool_id", input.toolId),
+    supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("tool_id", input.toolId),
+  ]);
+  if ((subCount ?? 0) > 0 || (invCount ?? 0) > 0) {
+    throw new Error(
+      "Cannot delete a tool that is referenced by subscriptions or invoices.",
+    );
+  }
+
+  const { error } = await supabase.from("tools").delete().eq("id", input.toolId);
+  if (error) throw error;
+
+  await supabase.from("audit_logs").insert({
+    user_id: input.session.employee.user_id,
+    employee_id: input.session.employee.id,
+    action: "tool_deleted",
+    entity_type: "tool",
+    entity_id: input.toolId,
+    metadata: {},
+  });
+}
+
+export async function updateSubscriptionStatus(input: {
+  session: SessionUser;
+  subscriptionId: string;
+  status: "active" | "paused" | "cancelled";
+}): Promise<Subscription> {
+  const allowed = ["active", "paused", "cancelled"] as const;
+  if (!allowed.includes(input.status)) {
+    throw new Error("Invalid status");
+  }
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    const sub = store.subscriptions.find((s) => s.id === input.subscriptionId);
+    if (!sub) throw new Error("Subscription not found");
+    const isOwner = sub.employee_id === input.session.employee.id;
+    const isAdmin = input.session.employee.role === "admin";
+    if (!isOwner && !isAdmin) throw new Error("Forbidden");
+    const previous = sub.status;
+    sub.status = input.status;
+    sub.updated_at = now();
+    store.auditLogs.unshift({
+      id: `a-${crypto.randomUUID()}`,
+      user_id: input.session.employee.user_id,
+      employee_id: input.session.employee.id,
+      action: "subscription_status_changed",
+      entity_type: "subscription",
+      entity_id: sub.id,
+      metadata: { from: previous, to: input.status },
+      created_at: now(),
+    });
+    return withTool(sub, store.tools);
+  }
+
+  const supabase = await createClient();
+  const { data: existing, error: fetchError } = await supabase
+    .from("subscriptions")
+    .select("*, tool:tools(*)")
+    .eq("id", input.subscriptionId)
+    .maybeSingle();
+  if (fetchError || !existing) {
+    throw fetchError ?? new Error("Subscription not found");
+  }
+
+  const isOwner = existing.employee_id === input.session.employee.id;
+  const isAdmin = input.session.employee.role === "admin";
+  if (!isOwner && !isAdmin) throw new Error("Forbidden");
+
+  const previous = existing.status as string;
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .update({ status: input.status, updated_at: now() })
+    .eq("id", input.subscriptionId)
+    .select("*, tool:tools(*)")
+    .single();
+  if (error || !data) throw error ?? new Error("Update failed");
+
+  await supabase.from("audit_logs").insert({
+    user_id: input.session.employee.user_id,
+    employee_id: input.session.employee.id,
+    action: "subscription_status_changed",
+    entity_type: "subscription",
+    entity_id: input.subscriptionId,
+    metadata: { from: previous, to: input.status },
+  });
+
+  return data as Subscription;
+}
+
 export async function getMySubscriptions(
   session: SessionUser,
 ): Promise<Subscription[]> {
@@ -129,6 +296,20 @@ export async function getMyMonthlyCosts(
   return (data ?? []) as MonthlyCost[];
 }
 
+export async function getPendingReviewCount(): Promise<number> {
+  if (isDemoMode()) {
+    return getDemoStore().invoices.filter((i) => i.status === "pending_review")
+      .length;
+  }
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("invoices")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending_review");
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function getAdminKpis() {
   if (isDemoMode()) {
     const store = getDemoStore();
@@ -182,7 +363,8 @@ export async function getEmployeeOverview() {
   if (isDemoMode()) {
     const store = getDemoStore();
     return store.employees
-      .filter((e) => e.role === "employee")
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
       .map((e) => {
         const subs = store.subscriptions.filter(
           (s) => s.employee_id === e.id && s.status === "active",
@@ -200,19 +382,15 @@ export async function getEmployeeOverview() {
   }
 
   const supabase = await createClient();
-  const { data: employees } = await supabase
-    .from("employees")
-    .select("*")
-    .eq("role", "employee")
-    .order("name");
-  const { data: subs } = await supabase
-    .from("subscriptions")
-    .select("*")
-    .eq("status", "active");
-  const { data: invoices } = await supabase
-    .from("invoices")
-    .select("employee_id, status")
-    .eq("status", "pending_review");
+  const [{ data: employees }, { data: subs }, { data: invoices }] =
+    await Promise.all([
+      supabase.from("employees").select("*").order("name"),
+      supabase.from("subscriptions").select("*").eq("status", "active"),
+      supabase
+        .from("invoices")
+        .select("employee_id, status")
+        .eq("status", "pending_review"),
+    ]);
 
   return ((employees ?? []) as Employee[]).map((e) => {
     const eSubs = ((subs ?? []) as Subscription[]).filter(
@@ -229,23 +407,103 @@ export async function getEmployeeOverview() {
   });
 }
 
+export async function updateEmployee(input: {
+  session: SessionUser;
+  employeeId: string;
+  patch: {
+    name?: string;
+    department?: string | null;
+    role?: "employee" | "admin";
+    active?: boolean;
+  };
+}): Promise<Employee> {
+  if (input.session.employee.role !== "admin") {
+    throw new Error("Forbidden");
+  }
+
+  if (input.patch.role === "admin" && input.session.employee.role !== "admin") {
+    throw new Error("Only admins can grant admin role");
+  }
+
+  // Prevent demoting/deactivating the last active admin accidentally is nice-to-have; skip for MVP.
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    const emp = store.employees.find((e) => e.id === input.employeeId);
+    if (!emp) throw new Error("Employee not found");
+    if (input.patch.name != null) emp.name = input.patch.name.trim();
+    if (input.patch.department !== undefined) {
+      emp.department = input.patch.department;
+    }
+    if (input.patch.role != null) emp.role = input.patch.role;
+    if (input.patch.active != null) emp.active = input.patch.active;
+    return emp;
+  }
+
+  const supabase = await createClient();
+  const payload: Record<string, unknown> = {};
+  if (input.patch.name != null) payload.name = input.patch.name.trim();
+  if (input.patch.department !== undefined) {
+    payload.department = input.patch.department;
+  }
+  if (input.patch.role != null) payload.role = input.patch.role;
+  if (input.patch.active != null) payload.active = input.patch.active;
+
+  const { data, error } = await supabase
+    .from("employees")
+    .update(payload)
+    .eq("id", input.employeeId)
+    .select("*")
+    .single();
+  if (error || !data) throw error ?? new Error("Update failed");
+
+  await supabase.from("audit_logs").insert({
+    user_id: input.session.employee.user_id,
+    employee_id: input.session.employee.id,
+    action: "employee_updated",
+    entity_type: "employee",
+    entity_id: input.employeeId,
+    metadata: input.patch,
+  });
+
+  return data as Employee;
+}
+
+export type AdminInvoiceStatusFilter =
+  | "all"
+  | "pending_review"
+  | "approved"
+  | "rejected";
+
 export async function listPendingInvoices(): Promise<Invoice[]> {
+  return listInvoices({ status: "pending_review" });
+}
+
+export async function listInvoices(input?: {
+  status?: AdminInvoiceStatusFilter;
+}): Promise<Invoice[]> {
+  const status = input?.status ?? "pending_review";
+
   if (isDemoMode()) {
     const store = getDemoStore();
     return store.invoices
-      .filter((i) => i.status === "pending_review")
+      .filter((i) => status === "all" || i.status === status)
       .map((i) => ({
         ...withTool(i, store.tools),
         employee: store.employees.find((e) => e.id === i.employee_id),
       }))
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
+
   const supabase = await createClient();
-  const { data } = await supabase
+  let query = supabase
     .from("invoices")
     .select("*, tool:tools(*), employee:employees(*)")
-    .eq("status", "pending_review")
     .order("created_at", { ascending: false });
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+  const { data } = await query;
   return (data ?? []) as Invoice[];
 }
 
@@ -266,6 +524,16 @@ export async function getInvoiceById(id: string): Promise<Invoice | null> {
     .eq("id", id)
     .maybeSingle();
   return (data as Invoice) ?? null;
+}
+
+/** Employee-scoped invoice fetch — never returns another employee's invoice. */
+export async function getMyInvoiceById(
+  session: SessionUser,
+  id: string,
+): Promise<Invoice | null> {
+  const invoice = await getInvoiceById(id);
+  if (!invoice || invoice.employee_id !== session.employee.id) return null;
+  return invoice;
 }
 
 export async function getEmployeeDetail(employeeId: string) {
@@ -308,6 +576,13 @@ export async function getEmployeeDetail(employeeId: string) {
   };
 }
 
+export type ReportRow = {
+  employee: Employee;
+  amount: number;
+  approvedAmount: number;
+  paidAmount: number;
+};
+
 export async function getReimbursementReport(input: {
   /** Inclusive lookback: 1 = current month only, 2 = this + previous, etc. */
   months?: number;
@@ -319,23 +594,42 @@ export async function getReimbursementReport(input: {
   const months = recentMonthKeys(span, input.endMonth ?? new Date());
   const monthSet = new Set(months);
 
+  type Acc = {
+    employee: Employee;
+    amount: number;
+    approvedAmount: number;
+    paidAmount: number;
+  };
+
   if (isDemoMode()) {
     const store = getDemoStore();
-    const byEmployee = new Map<string, number>();
+    const map = new Map<string, Acc>();
     for (const cost of store.monthlyCosts.filter((m) => monthSet.has(m.month))) {
-      byEmployee.set(
-        cost.employee_id,
-        (byEmployee.get(cost.employee_id) ?? 0) + cost.amount,
-      );
+      const emp = store.employees.find((e) => e.id === cost.employee_id);
+      if (!emp || emp.role !== "employee") continue;
+      const prev = map.get(emp.id) ?? {
+        employee: emp,
+        amount: 0,
+        approvedAmount: 0,
+        paidAmount: 0,
+      };
+      const amt = Number(cost.amount);
+      prev.amount += amt;
+      if (cost.status === "paid") prev.paidAmount += amt;
+      else prev.approvedAmount += amt;
+      map.set(emp.id, prev);
     }
-    const rows = store.employees
-      .filter((e) => e.role === "employee")
-      .map((e) => ({
-        employee: e,
-        amount: byEmployee.get(e.id) ?? 0,
-      }));
-    const total = rows.reduce((sum, r) => sum + r.amount, 0);
-    return { months, span, rows, total };
+    const rows = [...map.values()].sort((a, b) =>
+      a.employee.name.localeCompare(b.employee.name),
+    );
+    return {
+      months,
+      span,
+      rows,
+      total: rows.reduce((sum, r) => sum + r.amount, 0),
+      unpaidTotal: rows.reduce((sum, r) => sum + r.approvedAmount, 0),
+      paidTotal: rows.reduce((sum, r) => sum + r.paidAmount, 0),
+    };
   }
 
   const supabase = await createClient();
@@ -343,15 +637,21 @@ export async function getReimbursementReport(input: {
     .from("monthly_costs")
     .select("*, employee:employees(*)")
     .in("month", months);
-  const map = new Map<string, { employee: Employee; amount: number }>();
+  const map = new Map<string, Acc>();
   for (const row of data ?? []) {
     const emp = row.employee as Employee;
     if (!emp?.id) continue;
-    const prev = map.get(emp.id);
-    map.set(emp.id, {
+    const prev = map.get(emp.id) ?? {
       employee: emp,
-      amount: (prev?.amount ?? 0) + Number(row.amount),
-    });
+      amount: 0,
+      approvedAmount: 0,
+      paidAmount: 0,
+    };
+    const amt = Number(row.amount);
+    prev.amount += amt;
+    if (row.status === "paid") prev.paidAmount += amt;
+    else prev.approvedAmount += amt;
+    map.set(emp.id, prev);
   }
   const rows = [...map.values()].sort((a, b) =>
     a.employee.name.localeCompare(b.employee.name),
@@ -361,7 +661,63 @@ export async function getReimbursementReport(input: {
     span,
     rows,
     total: rows.reduce((sum, r) => sum + r.amount, 0),
+    unpaidTotal: rows.reduce((sum, r) => sum + r.approvedAmount, 0),
+    paidTotal: rows.reduce((sum, r) => sum + r.paidAmount, 0),
   };
+}
+
+export async function markMonthlyCostsPaid(input: {
+  session: SessionUser;
+  months: number;
+}): Promise<{ updated: number }> {
+  if (input.session.employee.role !== "admin") {
+    throw new Error("Forbidden");
+  }
+  const { recentMonthKeys } = await import("@/lib/invoices/calculate");
+  const span = Math.max(1, Math.min(3, Math.floor(input.months)));
+  const months = recentMonthKeys(span);
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    let updated = 0;
+    for (const cost of store.monthlyCosts) {
+      if (months.includes(cost.month) && cost.status !== "paid") {
+        cost.status = "paid";
+        updated += 1;
+      }
+    }
+    store.auditLogs.unshift({
+      id: `a-${crypto.randomUUID()}`,
+      user_id: input.session.employee.user_id,
+      employee_id: input.session.employee.id,
+      action: "monthly_costs_marked_paid",
+      entity_type: "monthly_costs",
+      entity_id: null,
+      metadata: { months, updated },
+      created_at: now(),
+    });
+    return { updated };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("monthly_costs")
+    .update({ status: "paid" })
+    .in("month", months)
+    .neq("status", "paid")
+    .select("id");
+  if (error) throw error;
+
+  await supabase.from("audit_logs").insert({
+    user_id: input.session.employee.user_id,
+    employee_id: input.session.employee.id,
+    action: "monthly_costs_marked_paid",
+    entity_type: "monthly_costs",
+    entity_id: null,
+    metadata: { months, updated: data?.length ?? 0 },
+  });
+
+  return { updated: data?.length ?? 0 };
 }
 
 export async function listAuditLogs(limit = 20): Promise<AuditLog[]> {

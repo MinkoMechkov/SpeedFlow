@@ -12,11 +12,11 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
+    <div className="flex flex-1 flex-col">
       <header className="border-b border-border/70 bg-[color-mix(in_oklab,var(--background)_88%,white)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-8">
-            <Link href={session.employee.role === "admin" ? "/admin" : "/employee/subscriptions"} className="font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--brand)]">
+            <Link href={session.employee.role === "admin" ? "/admin" : "/employee/subscriptions"} className="font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--brand-deep)]">
               SpendFlow
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
@@ -54,7 +54,7 @@ export function AppShell({
           ))}
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
         {children}
       </main>
     </div>

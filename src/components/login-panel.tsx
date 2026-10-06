@@ -19,6 +19,7 @@ export function LoginPanel({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
 
   async function demoLogin(employeeId: string) {
     setLoading(true);
@@ -45,15 +46,47 @@ export function LoginPanel({
     try {
       const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      router.push("/employee/subscriptions");
+
+      const userId = authData.user?.id;
+      let redirectTo = "/employee/subscriptions";
+      if (userId) {
+        const { data: employee } = await supabase
+          .from("employees")
+          .select("role")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (employee?.role === "admin") redirectTo = "/admin";
+      }
+
+      router.push(redirectTo);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function forgotPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Request failed");
+      toast.success(data.message ?? "Check your email for a reset link");
+      setForgotMode(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Request failed");
     } finally {
       setLoading(false);
     }
@@ -83,6 +116,37 @@ export function LoginPanel({
     );
   }
 
+  if (forgotMode) {
+    return (
+      <form onSubmit={forgotPassword} className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Enter your work email and we will send a reset link.
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="email">Work email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Sending…" : "Send reset link"}
+        </Button>
+        <button
+          type="button"
+          className="w-full cursor-pointer text-sm text-[var(--brand)]"
+          onClick={() => setForgotMode(false)}
+        >
+          Back to sign in
+        </button>
+      </form>
+    );
+  }
+
   return (
     <form onSubmit={supabaseLogin} className="space-y-4">
       <div className="space-y-2">
@@ -97,7 +161,16 @@ export function LoginPanel({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="password">Password</Label>
+          <button
+            type="button"
+            className="cursor-pointer text-xs text-[var(--brand)]"
+            onClick={() => setForgotMode(true)}
+          >
+            Forgot password?
+          </button>
+        </div>
         <Input
           id="password"
           type="password"
