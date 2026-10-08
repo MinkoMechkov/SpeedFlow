@@ -1,7 +1,11 @@
+import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { routing } from "@/i18n/routing";
 
 const DEMO_COOKIE = "spendflow_demo_session";
+
+const handleI18n = createMiddleware(routing);
 
 function isDemoModeEnv() {
   if (process.env.DEMO_MODE === "true") return true;
@@ -13,32 +17,56 @@ function isDemoModeEnv() {
   return !url || !key;
 }
 
+function stripLocale(pathname: string) {
+  for (const locale of routing.locales) {
+    if (pathname === `/${locale}`) return "/";
+    if (pathname.startsWith(`/${locale}/`)) {
+      return pathname.slice(locale.length + 1) || "/";
+    }
+  }
+  return pathname;
+}
+
+function localeFromPath(pathname: string) {
+  const segment = pathname.split("/")[1];
+  return routing.locales.includes(segment as (typeof routing.locales)[number])
+    ? segment
+    : routing.defaultLocale;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const locale = localeFromPath(pathname);
+  const pathWithoutLocale = stripLocale(pathname);
   const isProtected =
-    pathname.startsWith("/employee") || pathname.startsWith("/admin");
+    pathWithoutLocale.startsWith("/employee") ||
+    pathWithoutLocale.startsWith("/admin");
 
   if (!isProtected) {
-    return NextResponse.next();
+    return handleI18n(request);
   }
 
   if (isDemoModeEnv()) {
     const demoSession = request.cookies.get(DEMO_COOKIE)?.value;
     if (!demoSession) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", pathname);
+      url.pathname = `/${locale}/login`;
+      url.searchParams.set("next", pathWithoutLocale);
       return NextResponse.redirect(url);
     }
-    if (pathname.startsWith("/admin") && demoSession !== "e-admin") {
+    if (
+      pathWithoutLocale.startsWith("/admin") &&
+      demoSession !== "e-admin"
+    ) {
       const url = request.nextUrl.clone();
-      url.pathname = "/employee/subscriptions";
+      url.pathname = `/${locale}/employee/subscriptions`;
       return NextResponse.redirect(url);
     }
-    return NextResponse.next();
+    return handleI18n(request);
   }
 
-  let response = NextResponse.next({ request });
+  const i18nResponse = handleI18n(request);
+  let response = i18nResponse;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
@@ -53,7 +81,7 @@ export async function middleware(request: NextRequest) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
-        response = NextResponse.next({ request });
+        response = handleI18n(request);
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
@@ -65,15 +93,14 @@ export async function middleware(request: NextRequest) {
 
   if (!data?.claims.sub) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("next", pathname);
+    loginUrl.pathname = `/${locale}/login`;
+    loginUrl.searchParams.set("next", pathWithoutLocale);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Role checks live in the admin layout (requireAdmin) to avoid a DB query per request.
   return response;
 }
 
 export const config = {
-  matcher: ["/employee/:path*", "/admin/:path*"],
+  matcher: ["/((?!api|auth|_next|_vercel|.*\\..*).*)"],
 };

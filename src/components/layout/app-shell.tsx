@@ -1,9 +1,11 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import type { SessionUser } from "@/lib/types";
+import { Link } from "@/i18n/navigation";
+import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { NavLinks } from "@/components/layout/nav-links";
-import { SignOutButton } from "@/components/layout/sign-out-button";
+import { UserMenu } from "@/components/layout/user-menu";
 
-export function AppShell({
+export async function AppShell({
   session,
   nav,
   children,
@@ -12,12 +14,20 @@ export function AppShell({
   nav: Array<{ href: string; label: string }>;
   children: React.ReactNode;
 }) {
+  const t = await getTranslations("Common");
+  const tRole = await getTranslations("Role");
+  const homeHref =
+    session.employee.role === "admin" ? "/admin" : "/employee/subscriptions";
+
   return (
     <div className="flex flex-1 flex-col">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-[color-mix(in_oklab,var(--background)_82%,transparent)] backdrop-blur-md supports-[backdrop-filter]:bg-[color-mix(in_oklab,var(--background)_70%,transparent)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-8">
-            <Link href={session.employee.role === "admin" ? "/admin" : "/employee/subscriptions"} className="font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--brand-deep)]">
+            <Link
+              href={homeHref}
+              className="font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--brand-deep)]"
+            >
               SpendFlow
             </Link>
             <nav className="hidden items-center gap-1 md:flex">
@@ -25,14 +35,13 @@ export function AppShell({
             </nav>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium">{session.employee.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">
-                {session.employee.role}
-                {session.mode === "demo" ? " · demo" : ""}
-              </p>
-            </div>
-            <SignOutButton />
+            <LocaleSwitcher />
+            <UserMenu
+              name={session.employee.name}
+              roleLabel={`${tRole(session.employee.role)}${
+                session.mode === "demo" ? ` · ${t("demo")}` : ""
+              }`}
+            />
           </div>
         </div>
         <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 md:hidden sm:px-6">

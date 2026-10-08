@@ -130,9 +130,12 @@ export function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-export function formatEur(amount: number | null | undefined): string {
+export function formatEur(
+  amount: number | null | undefined,
+  locale: string = "en-GB",
+): string {
   const n = amount ?? 0;
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
   }).format(n);

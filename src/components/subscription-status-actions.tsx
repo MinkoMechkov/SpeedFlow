@@ -1,19 +1,24 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "@/i18n/navigation";
 import type { SubscriptionStatus } from "@/lib/types";
 
 const ACTIONS: {
   status: "active" | "paused" | "cancelled";
-  label: string;
+  labelKey: "pause" | "cancel" | "reactivate";
   when: SubscriptionStatus[];
 }[] = [
-  { status: "paused", label: "Pause", when: ["active", "pending"] },
-  { status: "cancelled", label: "Cancel", when: ["active", "paused", "pending"] },
-  { status: "active", label: "Reactivate", when: ["paused", "cancelled"] },
+  { status: "paused", labelKey: "pause", when: ["active", "pending"] },
+  {
+    status: "cancelled",
+    labelKey: "cancel",
+    when: ["active", "paused", "pending"],
+  },
+  { status: "active", labelKey: "reactivate", when: ["paused", "cancelled"] },
 ];
 
 export function SubscriptionStatusActions({
@@ -23,6 +28,8 @@ export function SubscriptionStatusActions({
   subscriptionId: string;
   status: SubscriptionStatus;
 }) {
+  const t = useTranslations("Subscription");
+  const tErrors = useTranslations("Errors");
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const available = ACTIONS.filter((a) => a.when.includes(status));
@@ -38,17 +45,19 @@ export function SubscriptionStatusActions({
         body: JSON.stringify({ status: next }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Update failed");
+      if (!res.ok) throw new Error(data.error ?? tErrors("updateFailed"));
       toast.success(
         next === "active"
-          ? "Subscription reactivated"
+          ? t("reactivated")
           : next === "paused"
-            ? "Subscription paused"
-            : "Subscription cancelled",
+            ? t("paused")
+            : t("cancelled"),
       );
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Update failed");
+      toast.error(
+        error instanceof Error ? error.message : tErrors("updateFailed"),
+      );
     } finally {
       setLoading(null);
     }
@@ -66,7 +75,7 @@ export function SubscriptionStatusActions({
           loading={loading === action.status}
           onClick={() => changeStatus(action.status)}
         >
-          {action.label}
+          {t(action.labelKey)}
         </Button>
       ))}
     </div>

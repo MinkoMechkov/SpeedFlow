@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { describeFlags, type FlagTone } from "@/lib/invoices/flags";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +32,7 @@ export function ValidationFlags({
   flags: string[];
   className?: string;
 }) {
+  const t = useTranslations("Flags");
   if (flags.length === 0) return null;
 
   const items = describeFlags(flags);
@@ -36,9 +40,9 @@ export function ValidationFlags({
   return (
     <section className={cn("space-y-3", className)}>
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-sm font-medium">Review notes</h3>
+        <h3 className="text-sm font-medium">{t("reviewNotes")}</h3>
         <p className="text-xs text-muted-foreground">
-          {items.length} flag{items.length === 1 ? "" : "s"}
+          {t("flagCount", { count: items.length })}
         </p>
       </div>
       <ul className="space-y-2">
@@ -47,10 +51,7 @@ export function ValidationFlags({
           return (
             <li
               key={flag.code}
-              className={cn(
-                "rounded-xl border px-3.5 py-3",
-                tone.wrap,
-              )}
+              className={cn("rounded-xl border px-3.5 py-3", tone.wrap)}
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span
@@ -62,11 +63,17 @@ export function ValidationFlags({
                   {flag.tone}
                 </span>
                 <p className={cn("text-sm font-medium", tone.label)}>
-                  {flag.label}
+                  {t(
+                    flag.labelKey as never,
+                    (flag.params ?? {}) as never,
+                  )}
                 </p>
               </div>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {flag.description}
+                {t(
+                  flag.descriptionKey as never,
+                  (flag.params ?? {}) as never,
+                )}
               </p>
             </li>
           );

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,85 +18,95 @@ import type { Tool } from "@/lib/types";
 
 const CUSTOM_TOOL = "__custom__";
 
-type StepId = "tool" | "upload" | "analyze";
+type Step = "tool" | "upload" | "analyze";
 
-const STEPS: Array<{ id: StepId; label: string }> = [
-  { id: "tool", label: "Saving custom tool" },
-  { id: "upload", label: "Uploading file" },
-  { id: "analyze", label: "Reading invoice with AI" },
-];
+function UploadSteps({
+  current,
+  custom,
+}: {
+  current: Step;
+  custom: boolean;
+}) {
+  const t = useTranslations("Employee");
+  const steps = custom
+    ? ([
+        { id: "tool" as const, label: t("stepTool") },
+        { id: "upload" as const, label: t("stepUpload") },
+        { id: "analyze" as const, label: t("stepAnalyze") },
+      ] as const)
+    : ([
+        { id: "upload" as const, label: t("stepUpload") },
+        { id: "analyze" as const, label: t("stepAnalyze") },
+      ] as const);
+  const currentIdx = steps.findIndex((s) => s.id === current);
 
-const BUTTON_LABEL: Record<StepId, string> = {
-  tool: "Saving tool…",
-  upload: "Uploading…",
-  analyze: "Analyzing invoice…",
-};
-
-function UploadSteps({ current, custom }: { current: StepId; custom: boolean }) {
-  const steps = custom ? STEPS : STEPS.filter((s) => s.id !== "tool");
-  const currentIndex = steps.findIndex((s) => s.id === current);
   return (
-    <ol
-      aria-live="polite"
-      className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4 text-sm"
-    >
-      {steps.map((s, i) => {
-        const done = i < currentIndex;
-        const active = i === currentIndex;
+    <ol className="space-y-2 rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-sm">
+      {steps.map((step, i) => {
+        const done = i < currentIdx;
+        const active = i === currentIdx;
         return (
-          <li key={s.id} className="flex items-center gap-2.5">
-            {done ? (
-              <CheckCircle2 className="size-4 text-[var(--brand-deep)]" aria-hidden />
-            ) : active ? (
-              <Loader2 className="size-4 animate-spin text-[var(--brand-deep)]" aria-hidden />
-            ) : (
-              <Circle className="size-4 text-muted-foreground/50" aria-hidden />
-            )}
-            <span className={active ? "font-medium" : done ? "" : "text-muted-foreground"}>
-              {s.label}
+          <li key={step.id} className="flex items-center gap-2.5">
+            <span
+              className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                done
+                  ? "bg-emerald-500 text-white"
+                  : active
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {done ? "✓" : i + 1}
+            </span>
+            <span
+              className={
+                done
+                  ? "text-muted-foreground line-through"
+                  : active
+                    ? "font-medium text-foreground"
+                    : "text-muted-foreground"
+              }
+            >
+              {step.label}
+              {active ? "…" : ""}
             </span>
           </li>
         );
       })}
-      {current === "analyze" ? (
-        <li className="pl-6.5 text-xs text-muted-foreground">
-          This usually takes a few seconds.
-        </li>
-      ) : null}
     </ol>
   );
 }
 
-function toolLabel(tool: Tool) {
-  return `${tool.name} · ${tool.vendor}`;
-}
-
-export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
+export function UploadForm({ initialTools }: { initialTools: Tool[] }) {
+  const t = useTranslations("Employee");
+  const tCommon = useTranslations("Common");
+  const tErrors = useTranslations("Errors");
   const router = useRouter();
   const [tools, setTools] = useState(initialTools);
-  const [toolId, setToolId] = useState(initialTools[0]?.id ?? "");
+  const [toolId, setToolId] = useState("");
   const [customName, setCustomName] = useState("");
   const [customVendor, setCustomVendor] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<StepId | null>(null);
+  const [step, setStep] = useState<Step | null>(null);
 
   const isCustom = toolId === CUSTOM_TOOL;
 
-  const selectItems = useMemo(() => {
-    const items: Record<string, string> = {
-      [CUSTOM_TOOL]: "Add custom tool…",
-    };
-    for (const tool of tools) {
-      items[tool.id] = toolLabel(tool);
-    }
-    return items;
-  }, [tools]);
+  const selectItems = useMemo(
+    () => [
+      ...tools.map((tool) => ({
+        value: tool.id,
+        label: `${tool.name} (${tool.vendor})`,
+      })),
+      { value: CUSTOM_TOOL, label: t("addCustomTool") },
+    ],
+    [tools, t],
+  );
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) {
-      toast.error("Select an invoice file");
+      toast.error(t("selectFile"));
       return;
     }
 
@@ -108,7 +118,7 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
       if (isCustom) {
         const name = customName.trim();
         if (!name) {
-          toast.error("Enter a tool name");
+          toast.error(t("enterToolName"));
           setLoading(false);
           return;
         }
@@ -122,17 +132,17 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
           }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Failed to create tool");
+        if (!res.ok) throw new Error(data.error ?? t("createToolFailed"));
         const tool = data.tool as Tool;
         setTools((prev) =>
-          prev.some((t) => t.id === tool.id) ? prev : [...prev, tool],
+          prev.some((x) => x.id === tool.id) ? prev : [...prev, tool],
         );
         resolvedToolId = tool.id;
         setToolId(tool.id);
       }
 
       if (!resolvedToolId || resolvedToolId === CUSTOM_TOOL) {
-        toast.error("Select a tool");
+        toast.error(t("selectToolError"));
         setLoading(false);
         setStep(null);
         return;
@@ -148,12 +158,14 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
         body: form,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      toast.success("Invoice uploaded and queued for review");
+      if (!res.ok) throw new Error(data.error ?? tErrors("uploadFailed"));
+      toast.success(t("uploadSuccess"));
       router.push("/employee/invoices");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Upload failed");
+      toast.error(
+        error instanceof Error ? error.message : tErrors("uploadFailed"),
+      );
       setLoading(false);
       setStep(null);
     } finally {
@@ -161,59 +173,65 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
     }
   }
 
+  const buttonLabel =
+    loading && step
+      ? step === "tool"
+        ? t("btnSavingTool")
+        : step === "upload"
+          ? t("btnUploading")
+          : t("btnAnalyzing")
+      : t("uploadAnalyze");
+
   return (
     <form onSubmit={onSubmit} className="max-w-xl space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="tool">Tool</Label>
+        <Label htmlFor="tool">{tCommon("tool")}</Label>
         <Select
           value={toolId}
           onValueChange={(v) => setToolId(v ?? "")}
           items={selectItems}
         >
           <SelectTrigger id="tool" className="w-full">
-            <SelectValue placeholder="Select tool" />
+            <SelectValue placeholder={t("selectTool")} />
           </SelectTrigger>
           <SelectContent>
             {tools.map((tool) => (
               <SelectItem key={tool.id} value={tool.id}>
-                {toolLabel(tool)}
+                {tool.name} ({tool.vendor})
               </SelectItem>
             ))}
-            <SelectItem value={CUSTOM_TOOL}>Add custom tool…</SelectItem>
+            <SelectItem value={CUSTOM_TOOL}>{t("addCustomTool")}</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          Invoice is always attached to your account — you cannot upload for
-          someone else.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("toolHint")}</p>
       </div>
 
       {isCustom ? (
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="custom-name">Tool name</Label>
+            <Label htmlFor="custom-name">{t("toolName")}</Label>
             <Input
               id="custom-name"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
-              placeholder="e.g. ChatGPT"
+              placeholder="ChatGPT"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="custom-vendor">Vendor</Label>
+            <Label htmlFor="custom-vendor">{tCommon("vendor")}</Label>
             <Input
               id="custom-vendor"
               value={customVendor}
               onChange={(e) => setCustomVendor(e.target.value)}
-              placeholder="e.g. OpenAI"
+              placeholder="OpenAI"
             />
           </div>
         </div>
       ) : null}
 
       <div className="space-y-2">
-        <Label htmlFor="file">Invoice file</Label>
+        <Label htmlFor="file">{t("invoiceFile")}</Label>
         <Input
           id="file"
           type="file"
@@ -223,7 +241,7 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
       </div>
       {loading && step ? <UploadSteps current={step} custom={isCustom} /> : null}
       <Button type="submit" size="lg" loading={loading}>
-        {loading && step ? BUTTON_LABEL[step] : "Upload & analyze"}
+        {buttonLabel}
       </Button>
     </form>
   );

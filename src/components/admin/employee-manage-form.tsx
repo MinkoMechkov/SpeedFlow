@@ -1,7 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useRouter } from "@/i18n/navigation";
 import type { Employee, UserRole } from "@/lib/types";
 
 export function EmployeeManageForm({ employee }: { employee: Employee }) {
+  const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
+  const tRole = useTranslations("Role");
+  const tErrors = useTranslations("Errors");
   const router = useRouter();
   const [name, setName] = useState(employee.name);
   const [department, setDepartment] = useState(employee.department ?? "");
@@ -38,11 +43,13 @@ export function EmployeeManageForm({ employee }: { employee: Employee }) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Update failed");
-      toast.success("Employee updated");
+      if (!res.ok) throw new Error(data.error ?? tErrors("updateFailed"));
+      toast.success(t("employeeUpdated"));
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Update failed");
+      toast.error(
+        error instanceof Error ? error.message : tErrors("updateFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -54,15 +61,12 @@ export function EmployeeManageForm({ employee }: { employee: Employee }) {
       className="space-y-4 rounded-xl border border-border/80 bg-card/60 p-5"
     >
       <div>
-        <h2 className="text-lg font-medium">Manage access</h2>
-        <p className="text-sm text-muted-foreground">
-          Only admins can set role to admin. New self-registrations always start
-          as employee.
-        </p>
+        <h2 className="text-lg font-medium">{t("manageAccess")}</h2>
+        <p className="text-sm text-muted-foreground">{t("manageAccessHint")}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="emp-name">Name</Label>
+          <Label htmlFor="emp-name">{tCommon("name")}</Label>
           <Input
             id="emp-name"
             value={name}
@@ -71,7 +75,7 @@ export function EmployeeManageForm({ employee }: { employee: Employee }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="emp-dept">Department</Label>
+          <Label htmlFor="emp-dept">{tCommon("department")}</Label>
           <Input
             id="emp-dept"
             value={department}
@@ -79,40 +83,46 @@ export function EmployeeManageForm({ employee }: { employee: Employee }) {
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Role</Label>
+          <Label>{tCommon("role")}</Label>
           <Select
             value={role}
             onValueChange={(v) => setRole((v ?? "employee") as UserRole)}
-            items={{ employee: "Employee", admin: "Admin" }}
+            items={{
+              employee: tRole("employee"),
+              admin: tRole("admin"),
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="employee">Employee</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="employee">{tRole("employee")}</SelectItem>
+              <SelectItem value="admin">{tRole("admin")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label>Active</Label>
+          <Label>{tCommon("active")}</Label>
           <Select
             value={active ? "yes" : "no"}
             onValueChange={(v) => setActive(v === "yes")}
-            items={{ yes: "Active", no: "Inactive" }}
+            items={{
+              yes: tCommon("active"),
+              no: tCommon("inactive"),
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="yes">Active</SelectItem>
-              <SelectItem value="no">Inactive</SelectItem>
+              <SelectItem value="yes">{tCommon("active")}</SelectItem>
+              <SelectItem value="no">{tCommon("inactive")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
       <Button type="submit" loading={loading} className="cursor-pointer">
-        {loading ? "Saving…" : "Save changes"}
+        {loading ? tCommon("saving") : t("saveChanges")}
       </Button>
     </form>
   );

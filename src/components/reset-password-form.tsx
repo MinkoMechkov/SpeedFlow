@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link, useRouter } from "@/i18n/navigation";
 
 export function ResetPasswordForm() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -17,11 +18,11 @@ export function ResetPasswordForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      toast.error(t("passwordTooShort"));
       return;
     }
     if (password !== confirm) {
-      toast.error("Passwords do not match");
+      toast.error(t("passwordsMismatch"));
       return;
     }
 
@@ -31,15 +32,11 @@ export function ResetPasswordForm() {
       const supabase = createClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-      toast.success("Password updated — you can sign in");
+      toast.success(t("passwordUpdated"));
       router.push("/login");
       router.refresh();
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not update password. Open the link from your email again.",
-      );
+      toast.error(error instanceof Error ? error.message : t("requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -48,7 +45,7 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="w-full space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="password">New password</Label>
+        <Label htmlFor="password">{t("newPassword")}</Label>
         <Input
           id="password"
           type="password"
@@ -60,7 +57,7 @@ export function ResetPasswordForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirm">Confirm password</Label>
+        <Label htmlFor="confirm">{t("confirmPassword")}</Label>
         <Input
           id="confirm"
           type="password"
@@ -72,14 +69,14 @@ export function ResetPasswordForm() {
         />
       </div>
       <Button type="submit" size="lg" className="h-11 w-full" loading={loading}>
-        {loading ? "Saving…" : "Update password"}
+        {t("updatePassword")}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         <Link
           href="/login"
           className="font-medium text-[var(--brand-deep)] underline-offset-4 hover:underline"
         >
-          Back to sign in
+          {t("backToSignIn")}
         </Link>
       </p>
     </form>

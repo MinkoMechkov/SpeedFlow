@@ -2,7 +2,7 @@
 
 Living checklist of what is done vs not. Update this as work lands.
 
-Last reviewed: 2026-10-06
+Last reviewed: 2026-10-08
 
 ---
 
@@ -97,6 +97,19 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Tool catalog CRUD (`/admin/tools`; delete blocked if referenced)
 - [x] Pending-count watcher toast on new uploads / remote reviews
 - [ ] Demo store reset UI/API
+
+---
+
+## Internationalization (i18n)
+
+- [x] `next-intl` with locales `bg` (default) and `en`, always-prefixed routes `/bg/…`, `/en/…`
+- [x] Root `/` redirects to `/bg`; API routes stay under `/api/*` (no locale prefix)
+- [x] Message catalogs `messages/bg.json` + `messages/en.json` (UI, statuses, flags, toasts)
+- [x] Locale switcher in app shell, marketing home, and auth shell
+- [x] Locale-aware currency (`formatEurForLocale`) and dates/months
+- [x] CSV export headers follow `?locale=` from the report page
+- [x] Middleware composes next-intl with demo/Supabase auth (locale-stripped path checks)
+- [x] `next.config` uses a manual `next-intl/config` alias (avoids `createNextIntlPlugin` → `@swc/core` on hosts with strict SWC native-cache checks)
 
 ---
 

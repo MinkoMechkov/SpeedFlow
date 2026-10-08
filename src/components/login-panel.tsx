@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { Employee } from "@/lib/types";
 
 const linkClass =
@@ -26,16 +26,6 @@ function FormError({ message }: { message: string | null }) {
   );
 }
 
-function friendlyAuthError(message: string) {
-  if (/invalid login credentials/i.test(message)) {
-    return "That email and password don't match. Check them and try again.";
-  }
-  if (/email not confirmed/i.test(message)) {
-    return "Please confirm your email first — check your inbox for the link.";
-  }
-  return message;
-}
-
 export function LoginPanel({
   demoMode,
   demoUsers,
@@ -43,6 +33,8 @@ export function LoginPanel({
   demoMode: boolean;
   demoUsers: Employee[];
 }) {
+  const t = useTranslations("Auth");
+  const tRole = useTranslations("Role");
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,6 +42,12 @@ export function LoginPanel({
   const [pendingDemoId, setPendingDemoId] = useState<string | null>(null);
   const [forgotMode, setForgotMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function friendlyAuthError(message: string) {
+    if (/invalid login credentials/i.test(message)) return t("invalidCredentials");
+    if (/email not confirmed/i.test(message)) return t("emailNotConfirmed");
+    return message;
+  }
 
   function switchMode(next: boolean) {
     setError(null);
@@ -67,11 +65,11 @@ export function LoginPanel({
         body: JSON.stringify({ employeeId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Demo login failed");
+      if (!res.ok) throw new Error(data.error ?? t("demoLoginFailed"));
       router.push(data.redirect);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("loginFailed"));
       setLoading(false);
       setPendingDemoId(null);
     }
@@ -103,7 +101,7 @@ export function LoginPanel({
       router.refresh();
     } catch (err) {
       setError(
-        friendlyAuthError(err instanceof Error ? err.message : "Login failed"),
+        friendlyAuthError(err instanceof Error ? err.message : t("loginFailed")),
       );
       setLoading(false);
     }
@@ -120,11 +118,11 @@ export function LoginPanel({
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Request failed");
-      toast.success(data.message ?? "Check your email for a reset link");
+      if (!res.ok) throw new Error(data.error ?? t("requestFailed"));
+      toast.success(data.message ?? t("resetSent"));
       switchMode(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
+      setError(err instanceof Error ? err.message : t("requestFailed"));
     } finally {
       setLoading(false);
     }
@@ -133,9 +131,7 @@ export function LoginPanel({
   if (demoMode) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Demo mode is on — pick a persona. No Supabase credentials required.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("demoIntro")}</p>
         <FormError message={error} />
         <div className="grid gap-2.5">
           {demoUsers.map((user) => (
@@ -149,7 +145,7 @@ export function LoginPanel({
               onClick={() => demoLogin(user.id)}
             >
               <span className="mr-auto">{user.name}</span>
-              <span className="text-xs capitalize opacity-80">{user.role}</span>
+              <span className="text-xs opacity-80">{tRole(user.role)}</span>
             </Button>
           ))}
         </div>
@@ -160,16 +156,14 @@ export function LoginPanel({
   if (forgotMode) {
     return (
       <form onSubmit={forgotPassword} className="space-y-5">
-        <p className="text-sm text-muted-foreground">
-          Enter your work email and we&apos;ll send you a reset link.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("forgotIntro")}</p>
         <div className="space-y-2">
-          <Label htmlFor="email">Work email</Label>
+          <Label htmlFor="email">{t("workEmail")}</Label>
           <Input
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="you@company.com"
+            placeholder={t("emailPlaceholder")}
             className="h-10"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -179,7 +173,7 @@ export function LoginPanel({
         </div>
         <FormError message={error} />
         <Button type="submit" size="lg" className="h-11 w-full" loading={loading}>
-          {loading ? "Sending link…" : "Send reset link"}
+          {loading ? t("sendingLink") : t("sendReset")}
         </Button>
         <button
           type="button"
@@ -187,7 +181,7 @@ export function LoginPanel({
           onClick={() => switchMode(false)}
         >
           <ArrowLeft className="size-4" aria-hidden />
-          Back to sign in
+          {t("backToSignIn")}
         </button>
       </form>
     );
@@ -196,12 +190,12 @@ export function LoginPanel({
   return (
     <form onSubmit={supabaseLogin} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="email">Work email</Label>
+        <Label htmlFor="email">{t("workEmail")}</Label>
         <Input
           id="email"
           type="email"
           autoComplete="email"
-          placeholder="you@company.com"
+          placeholder={t("emailPlaceholder")}
           className="h-10"
           value={email}
           onChange={(e) => {
@@ -214,13 +208,13 @@ export function LoginPanel({
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t("password")}</Label>
           <button
             type="button"
             className={`${linkClass} text-xs`}
             onClick={() => switchMode(true)}
           >
-            Forgot password?
+            {t("forgotPassword")}
           </button>
         </div>
         <Input
@@ -244,12 +238,12 @@ export function LoginPanel({
         className="mt-1 h-11 w-full text-[0.95rem]"
         loading={loading}
       >
-        {loading ? "Signing in…" : "Sign in"}
+        {loading ? t("signingIn") : t("signIn")}
       </Button>
       <p className="border-t border-border/70 pt-5 text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        {t("noAccount")}{" "}
         <Link href="/#register" className={linkClass}>
-          Create one
+          {t("createOne")}
         </Link>
       </p>
     </form>

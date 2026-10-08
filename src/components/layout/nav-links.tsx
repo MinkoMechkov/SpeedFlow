@@ -1,8 +1,8 @@
 "use client";
 
-import Link, { useLinkStatus } from "next/link";
-import { usePathname } from "next/navigation";
+import { useLinkStatus } from "next/link";
 import { cn } from "cn";
+import { Link, usePathname } from "@/i18n/navigation";
 
 type NavItem = { href: string; label: string };
 
@@ -47,9 +47,7 @@ export function NavLinks({
         aria-current={active ? "page" : undefined}
         className={cn(
           "relative shrink-0 rounded-md px-3 py-1.5 transition",
-          variant === "desktop"
-            ? "text-sm"
-            : "text-xs font-medium",
+          variant === "desktop" ? "text-sm" : "text-xs font-medium",
           active
             ? "bg-secondary font-medium text-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",

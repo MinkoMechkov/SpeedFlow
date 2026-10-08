@@ -1,19 +1,25 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 
-const MAP: Record<string, string> = {
-  pending_review: "Pending review",
-  approved: "Approved",
-  rejected: "Rejected",
-  uploaded: "Uploaded",
-  extracting: "Extracting",
-  active: "Active",
-  paused: "Paused",
-  cancelled: "Cancelled",
-  pending: "Pending",
-};
+const KNOWN = [
+  "pending_review",
+  "approved",
+  "rejected",
+  "uploaded",
+  "extracting",
+  "active",
+  "paused",
+  "cancelled",
+  "pending",
+] as const;
 
 export function StatusBadge({ status }: { status: string }) {
-  const label = MAP[status] ?? status;
+  const t = useTranslations("Status");
+  const label = (KNOWN as readonly string[]).includes(status)
+    ? t(status as (typeof KNOWN)[number])
+    : status;
   const variant =
     status === "approved" || status === "active"
       ? "default"

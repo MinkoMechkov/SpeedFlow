@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "@/i18n/navigation";
 
 export function MarkPaidButton({
   months,
@@ -14,11 +15,13 @@ export function MarkPaidButton({
 }: {
   months: number;
   unpaidTotal: number;
-  /** When set, only this employee's unpaid rows are marked paid. */
   employeeId?: string;
   employeeName?: string;
   size?: "default" | "sm";
 }) {
+  const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
+  const tErrors = useTranslations("Errors");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const perEmployee = Boolean(employeeId);
@@ -26,9 +29,7 @@ export function MarkPaidButton({
   async function onClick() {
     if (unpaidTotal <= 0) {
       toast.message(
-        perEmployee
-          ? "Nothing unpaid for this employee in this range"
-          : "Nothing unpaid in this range",
+        perEmployee ? t("nothingUnpaidEmployee") : t("nothingUnpaidRange"),
       );
       return;
     }
@@ -43,18 +44,22 @@ export function MarkPaidButton({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to mark paid");
-      const who = employeeName ? ` for ${employeeName}` : "";
+      if (!res.ok) throw new Error(data.error ?? tErrors("markPaidFailed"));
       toast.success(
         data.updated
-          ? `Marked ${data.updated} cost row(s) as paid${who}`
+          ? perEmployee && employeeName
+            ? t("markedPaidEmployee", {
+                count: data.updated,
+                name: employeeName,
+              })
+            : t("markedPaid", { count: data.updated })
           : perEmployee
-            ? "No unpaid rows for this employee"
-            : "No unpaid rows in this range",
+            ? t("noUnpaidEmployee")
+            : t("noUnpaidRange"),
       );
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed");
+      toast.error(error instanceof Error ? error.message : tErrors("failed"));
     } finally {
       setLoading(false);
     }
@@ -71,10 +76,10 @@ export function MarkPaidButton({
       className="cursor-pointer"
     >
       {loading
-        ? "Updating…"
+        ? tCommon("updating")
         : perEmployee
-          ? "Mark paid"
-          : "Mark range as paid"}
+          ? t("markPaid")
+          : t("markRangePaid")}
     </Button>
   );
 }

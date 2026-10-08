@@ -1,18 +1,24 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { useRouter } from "@/i18n/navigation";
 
 const POLL_MS = 12_000;
 
 export function PendingQueueWatcher() {
+  const t = useTranslations("Admin");
   const router = useRouter();
   const routerRef = useRef(router);
   const previous = useRef<number | null>(null);
   const initialized = useRef(false);
+  const tRef = useRef(t);
 
-  routerRef.current = router;
+  useEffect(() => {
+    routerRef.current = router;
+    tRef.current = t;
+  }, [router, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,8 +46,8 @@ export function PendingQueueWatcher() {
             const added = count - previous.current;
             toast.info(
               added === 1
-                ? "New invoice pending review"
-                : `${added} new invoices pending review`,
+                ? tRef.current("newInvoicePending")
+                : tRef.current("newInvoicesPending", { count: added }),
             );
             routerRef.current.refresh();
           } else if (count < previous.current) {

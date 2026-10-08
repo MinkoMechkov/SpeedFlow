@@ -1,6 +1,8 @@
-import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { Link } from "@/i18n/navigation";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const t = await getTranslations("Footer");
   const year = new Date().getFullYear();
 
   return (
@@ -13,9 +15,7 @@ export function SiteFooter() {
           >
             SpendFlow
           </Link>
-          <p className="text-xs text-muted-foreground">
-            Subscription invoices → monthly reimbursements
-          </p>
+          <p className="text-xs text-muted-foreground">{t("tagline")}</p>
         </div>
         <p className="text-xs text-muted-foreground">© {year}</p>
       </div>

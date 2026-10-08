@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useRouter } from "@/i18n/navigation";
 import type { Tool } from "@/lib/types";
 
 export function ToolsCatalog({ tools }: { tools: Tool[] }) {
+  const t = useTranslations("Admin");
+  const tCommon = useTranslations("Common");
+  const tErrors = useTranslations("Errors");
   const router = useRouter();
   const [name, setName] = useState("");
   const [vendor, setVendor] = useState("");
@@ -36,13 +40,15 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
         body: JSON.stringify({ name, vendor }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Create failed");
-      toast.success("Tool added");
+      if (!res.ok) throw new Error(data.error ?? tErrors("createFailed"));
+      toast.success(t("toolAdded"));
       setName("");
       setVendor("");
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Create failed");
+      toast.error(
+        error instanceof Error ? error.message : tErrors("createFailed"),
+      );
     } finally {
       setCreating(false);
     }
@@ -63,30 +69,34 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
         body: JSON.stringify({ name: editName, vendor: editVendor }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Update failed");
-      toast.success("Tool updated");
+      if (!res.ok) throw new Error(data.error ?? tErrors("updateFailed"));
+      toast.success(t("toolUpdated"));
       setEditingId(null);
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Update failed");
+      toast.error(
+        error instanceof Error ? error.message : tErrors("updateFailed"),
+      );
     } finally {
       setBusyId(null);
     }
   }
 
   async function removeTool(toolId: string) {
-    if (!confirm("Delete this tool? This fails if it is in use.")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setBusyId(toolId);
     try {
       const res = await fetch(`/api/admin/tools/${toolId}`, {
         method: "DELETE",
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Delete failed");
-      toast.success("Tool deleted");
+      if (!res.ok) throw new Error(data.error ?? tErrors("deleteFailed"));
+      toast.success(t("toolDeleted"));
       router.refresh();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Delete failed");
+      toast.error(
+        error instanceof Error ? error.message : tErrors("deleteFailed"),
+      );
     } finally {
       setBusyId(null);
     }
@@ -99,7 +109,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
         className="grid gap-3 rounded-xl border border-border/80 bg-card/60 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
       >
         <div className="space-y-2">
-          <Label htmlFor="tool-name">Name</Label>
+          <Label htmlFor="tool-name">{tCommon("name")}</Label>
           <Input
             id="tool-name"
             value={name}
@@ -109,7 +119,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="tool-vendor">Vendor</Label>
+          <Label htmlFor="tool-vendor">{tCommon("vendor")}</Label>
           <Input
             id="tool-vendor"
             value={vendor}
@@ -118,7 +128,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
           />
         </div>
         <Button type="submit" loading={creating}>
-          {creating ? "Adding…" : "Add tool"}
+          {creating ? t("adding") : t("addTool")}
         </Button>
       </form>
 
@@ -126,16 +136,16 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead className="w-[220px]">Actions</TableHead>
+              <TableHead>{tCommon("name")}</TableHead>
+              <TableHead>{tCommon("vendor")}</TableHead>
+              <TableHead className="w-[220px]">{tCommon("actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {tools.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="text-muted-foreground">
-                  No tools yet.
+                  {t("noTools")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -170,14 +180,14 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
                             loading={busyId === tool.id}
                             onClick={() => saveEdit(tool.id)}
                           >
-                            Save
+                            {tCommon("save")}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => setEditingId(null)}
                           >
-                            Cancel
+                            {tCommon("cancel")}
                           </Button>
                         </>
                       ) : (
@@ -187,7 +197,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
                             variant="secondary"
                             onClick={() => startEdit(tool)}
                           >
-                            Edit
+                            {tCommon("edit")}
                           </Button>
                           <Button
                             size="sm"
@@ -195,7 +205,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
                             loading={busyId === tool.id}
                             onClick={() => removeTool(tool.id)}
                           >
-                            Delete
+                            {tCommon("delete")}
                           </Button>
                         </>
                       )}

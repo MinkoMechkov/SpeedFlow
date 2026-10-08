@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
+import { redirect } from "@/i18n/navigation";
 import { getDemoStore } from "@/lib/demo/store";
 import { isDemoMode } from "@/lib/mode";
 import { createClient } from "@/lib/supabase/server";
@@ -35,13 +36,19 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
 export async function requireSession(): Promise<SessionUser> {
   const session = await getSessionUser();
-  if (!session) redirect("/login");
-  return session;
+  if (!session) {
+    const locale = await getLocale();
+    redirect({ href: "/login", locale });
+  }
+  return session as SessionUser;
 }
 
 export async function requireAdmin(): Promise<SessionUser> {
   const session = await requireSession();
-  if (session.employee.role !== "admin") redirect("/employee/subscriptions");
+  if (session.employee.role !== "admin") {
+    const locale = await getLocale();
+    redirect({ href: "/employee/subscriptions", locale });
+  }
   return session;
 }
 

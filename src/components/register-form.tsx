@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Link, useRouter } from "@/i18n/navigation";
 
 export function RegisterForm() {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,19 +32,21 @@ export function RegisterForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Registration failed");
+      if (!res.ok) throw new Error(data.error ?? t("registrationFailed"));
 
       if (data.redirect) {
-        toast.success("Account created");
+        toast.success(t("accountCreated"));
         router.push(data.redirect);
         router.refresh();
         return;
       }
 
-      toast.success(data.message ?? "Account created — please sign in");
+      toast.success(data.message ?? t("accountCreatedSignIn"));
       router.push("/login");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Registration failed");
+      toast.error(
+        error instanceof Error ? error.message : t("registrationFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -53,14 +56,14 @@ export function RegisterForm() {
     <form onSubmit={onSubmit} className="w-full space-y-3.5">
       <div>
         <h2 className="font-[family-name:var(--font-display)] text-xl tracking-tight sm:text-2xl">
-          Create account
+          {t("createAccount")}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          New accounts are employees. Only admins can grant admin access.
+          {t("createAccountHint")}
         </p>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="reg-name">Full name</Label>
+        <Label htmlFor="reg-name">{t("fullName")}</Label>
         <Input
           id="reg-name"
           className="h-9"
@@ -71,7 +74,7 @@ export function RegisterForm() {
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="reg-email">Work email</Label>
+        <Label htmlFor="reg-email">{t("workEmail")}</Label>
         <Input
           id="reg-email"
           type="email"
@@ -83,7 +86,7 @@ export function RegisterForm() {
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="reg-password">Password</Label>
+        <Label htmlFor="reg-password">{t("password")}</Label>
         <Input
           id="reg-password"
           type="password"
@@ -96,7 +99,7 @@ export function RegisterForm() {
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="reg-dept">Department (optional)</Label>
+        <Label htmlFor="reg-dept">{t("departmentOptional")}</Label>
         <Input
           id="reg-dept"
           className="h-9"
@@ -106,15 +109,15 @@ export function RegisterForm() {
         />
       </div>
       <Button type="submit" size="lg" className="mt-1 h-10 w-full" loading={loading}>
-        {loading ? "Creating account…" : "Create account"}
+        {loading ? t("creatingAccount") : t("createAccount")}
       </Button>
       <p className="border-t border-border/70 pt-3.5 text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
+        {t("alreadyHaveAccount")}{" "}
         <Link
           href="/login"
           className="font-medium text-[var(--brand-deep)] underline-offset-4 hover:underline"
         >
-          Sign in
+          {t("signIn")}
         </Link>
       </p>
     </form>
