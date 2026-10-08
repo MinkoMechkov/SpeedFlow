@@ -377,7 +377,16 @@
     "totalThisMonth": "Общо този месец",
     "subscription": "Абонамент",
     "monthly": "Месечно",
-    "reimbursementCalculatedFor": "Изчислено за {month}"
+    "reimbursementCalculatedFor": "Изчислено за {month}",
+    "invoiceApprovedToast": "Фактурата е одобрена: {label}",
+    "invoiceRejectedToast": "Фактурата е отказана: {label}",
+    "deleteInvoice": "Изтрий",
+    "deletingInvoice": "Изтриване…",
+    "deleteConfirmTitle": "Изтриване на фактурата?",
+    "deleteConfirmBody": "Качването ще бъде премахнато и действието не може да се отмени. Можете да качите отново при нужда.",
+    "invoiceDeleted": "Фактурата е изтрита",
+    "cannotDeleteApproved": "Одобрени фактури не могат да се изтриват",
+    "deleteFailed": "Неуспешно изтриване на фактура"
   },
   "Invoice": {
     "preview": "Преглед на файл",

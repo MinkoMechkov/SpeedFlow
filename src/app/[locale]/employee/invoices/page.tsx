@@ -1,3 +1,6 @@
+import { DeleteInvoiceButton } from "@/components/employee/delete-invoice-button";
+import { StatusBadge } from "@/components/status-badge";
+import { TableIconLink } from "@/components/table-icon-link";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Table,
@@ -7,12 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/status-badge";
+import { Link } from "@/i18n/navigation";
 import { requireSession } from "@/lib/auth";
 import { getMyInvoices } from "@/lib/data";
 import { formatEurForLocale } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
-import { Link } from "@/i18n/navigation";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -79,12 +81,15 @@ export default async function EmployeeInvoicesPage({ params }: Props) {
                     <StatusBadge status={inv.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link
-                      href={`/employee/invoices/${inv.id}`}
-                      className="text-sm text-[var(--brand-deep)] hover:underline"
-                    >
-                      {tCommon("open")}
-                    </Link>
+                    <div className="inline-flex items-center justify-end gap-0.5">
+                      <TableIconLink
+                        href={`/employee/invoices/${inv.id}`}
+                        label={tCommon("open")}
+                      />
+                      {inv.status !== "approved" ? (
+                        <DeleteInvoiceButton invoiceId={inv.id} iconOnly />
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

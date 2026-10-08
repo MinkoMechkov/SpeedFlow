@@ -15,6 +15,7 @@ import {
 } from "@/lib/data";
 import { formatEurForLocale } from "@/lib/locale-format";
 import { cn } from "@/lib/utils";
+import { TableIconLink } from "@/components/table-icon-link";
 import { Link } from "@/i18n/navigation";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -128,12 +129,10 @@ export default async function AdminInvoicesPage({ params, searchParams }: Props)
                     <StatusBadge status={inv.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link
+                    <TableIconLink
                       href={`/admin/invoices/${inv.id}`}
-                      className="text-sm text-[var(--brand-deep)] hover:underline"
-                    >
-                      {tc("open")}
-                    </Link>
+                      label={tc("open")}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

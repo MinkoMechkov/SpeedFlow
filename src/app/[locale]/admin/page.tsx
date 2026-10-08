@@ -7,6 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TableIconLink } from "@/components/table-icon-link";
 import { Link } from "@/i18n/navigation";
 import { requireAdmin } from "@/lib/auth";
 import {
@@ -111,12 +112,10 @@ export default async function AdminDashboardPage({
                       {formatEurForLocale(inv.monthly_cost, locale)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link
+                      <TableIconLink
                         href={`/admin/invoices/${inv.id}`}
-                        className="text-sm text-[var(--brand-deep)] hover:underline"
-                      >
-                        {tCommon("review")}
-                      </Link>
+                        label={tCommon("review")}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

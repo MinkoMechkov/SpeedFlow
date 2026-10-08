@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
 import { SubscriptionStatusActions } from "@/components/subscription-status-actions";
+import { TableIconLink } from "@/components/table-icon-link";
 import { requireAdmin } from "@/lib/auth";
 import { getEmployeeDetail } from "@/lib/data";
 import { formatEurForLocale } from "@/lib/locale-format";
@@ -135,12 +136,10 @@ export default async function AdminEmployeeDetailPage({
                       <StatusBadge status={inv.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Link
+                      <TableIconLink
                         href={`/admin/invoices/${inv.id}`}
-                        className="text-sm text-[var(--brand-deep)] hover:underline"
-                      >
-                        {tc("open")}
-                      </Link>
+                        label={tc("open")}
+                      />
                     </TableCell>
                   </TableRow>
                 ))

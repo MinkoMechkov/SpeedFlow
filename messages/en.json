@@ -377,7 +377,16 @@
     "totalThisMonth": "Total this month",
     "subscription": "Subscription",
     "monthly": "Monthly",
-    "reimbursementCalculatedFor": "Calculated for {month}"
+    "reimbursementCalculatedFor": "Calculated for {month}",
+    "invoiceApprovedToast": "Invoice approved: {label}",
+    "invoiceRejectedToast": "Invoice rejected: {label}",
+    "deleteInvoice": "Delete",
+    "deletingInvoice": "Deleting…",
+    "deleteConfirmTitle": "Delete this invoice?",
+    "deleteConfirmBody": "This removes the upload and cannot be undone. You can upload again if needed.",
+    "invoiceDeleted": "Invoice deleted",
+    "cannotDeleteApproved": "Approved invoices cannot be deleted",
+    "deleteFailed": "Failed to delete invoice"
   },
   "Invoice": {
     "preview": "Preview file",

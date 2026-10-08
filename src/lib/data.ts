@@ -274,6 +274,51 @@ export async function getMyInvoices(session: SessionUser): Promise<Invoice[]> {
   return (data ?? []) as Invoice[];
 }
 
+export type InvoiceStatusItem = {
+  id: string;
+  status: Invoice["status"];
+  label: string;
+};
+
+/** Lightweight snapshot for employee live-status polling. */
+export async function getMyInvoiceStatuses(
+  session: SessionUser,
+): Promise<InvoiceStatusItem[]> {
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    return store.invoices
+      .filter((i) => i.employee_id === session.employee.id)
+      .map((i) => {
+        const tool = store.tools.find((t) => t.id === i.tool_id);
+        return {
+          id: i.id,
+          status: i.status,
+          label: i.invoice_number ?? tool?.name ?? i.file_name ?? i.id,
+        };
+      })
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("id, status, invoice_number, file_name, tool:tools(name)")
+    .eq("employee_id", session.employee.id)
+    .order("id");
+  if (error) throw error;
+  return (data ?? []).map((row) => {
+    const tool = row.tool as { name?: string } | null;
+    return {
+      id: row.id as string,
+      status: row.status as Invoice["status"],
+      label:
+        (row.invoice_number as string | null) ??
+        tool?.name ??
+        (row.file_name as string | null) ??
+        (row.id as string),
+    };
+  });
+}
+
 export async function getMyMonthlyCosts(
   session: SessionUser,
   month?: string,
@@ -1159,5 +1204,113 @@ export async function reviewInvoice(input: {
   }
 
   return invoice as Invoice;
+}
+
+export class InvoiceDeleteError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "InvoiceDeleteError";
+    this.status = status;
+  }
+}
+
+export async function deleteMyInvoice(input: {
+  session: SessionUser;
+  invoiceId: string;
+}): Promise<void> {
+  const { session, invoiceId } = input;
+
+  if (isDemoMode()) {
+    const store = getDemoStore();
+    const idx = store.invoices.findIndex((i) => i.id === invoiceId);
+    if (idx < 0 || store.invoices[idx].employee_id !== session.employee.id) {
+      throw new InvoiceDeleteError("Invoice not found", 404);
+    }
+    const invoice = store.invoices[idx];
+    if (invoice.status === "approved") {
+      throw new InvoiceDeleteError("Approved invoices cannot be deleted", 409);
+    }
+
+    const subId = invoice.subscription_id;
+    store.invoices.splice(idx, 1);
+    store.extractions = store.extractions.filter(
+      (e) => e.invoice_id !== invoiceId,
+    );
+
+    if (subId) {
+      const sub = store.subscriptions.find((s) => s.id === subId);
+      const stillReferenced = store.invoices.some(
+        (i) => i.subscription_id === subId,
+      );
+      if (sub?.status === "pending" && !stillReferenced) {
+        store.subscriptions = store.subscriptions.filter((s) => s.id !== subId);
+      }
+    }
+
+    store.auditLogs.unshift({
+      id: `audit-${crypto.randomUUID()}`,
+      user_id: session.employee.user_id,
+      employee_id: session.employee.id,
+      action: "invoice_deleted",
+      entity_type: "invoice",
+      entity_id: invoiceId,
+      metadata: {
+        status: invoice.status,
+        file_name: invoice.file_name,
+        tool_id: invoice.tool_id,
+      },
+      created_at: now(),
+    });
+    return;
+  }
+
+  const supabase = await createClient();
+  const { data: existing, error: fetchError } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("id", invoiceId)
+    .eq("employee_id", session.employee.id)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+  if (!existing) {
+    throw new InvoiceDeleteError("Invoice not found", 404);
+  }
+  if (existing.status === "approved") {
+    throw new InvoiceDeleteError("Approved invoices cannot be deleted", 409);
+  }
+
+  const storagePath = existing.storage_path as string | null;
+
+  const { error: deleteError } = await supabase
+    .from("invoices")
+    .delete()
+    .eq("id", invoiceId)
+    .eq("employee_id", session.employee.id);
+  if (deleteError) throw deleteError;
+
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage
+      .from("invoices")
+      .remove([storagePath]);
+    if (storageError) {
+      console.warn("Failed to remove invoice file from storage", storageError);
+    }
+  }
+
+  await supabase.from("audit_logs").insert({
+    user_id: session.employee.user_id,
+    employee_id: session.employee.id,
+    action: "invoice_deleted",
+    entity_type: "invoice",
+    entity_id: invoiceId,
+    metadata: {
+      status: existing.status,
+      file_name: existing.file_name,
+      tool_id: existing.tool_id,
+      storage_path: storagePath,
+    },
+  });
 }
 

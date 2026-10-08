@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
+import { DeleteInvoiceButton } from "@/components/employee/delete-invoice-button";
 import { InvoiceFilePreview } from "@/components/invoices/invoice-file-preview";
 import { ValidationFlags } from "@/components/invoices/validation-flags";
 import { StatusBadge } from "@/components/status-badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { requireSession } from "@/lib/auth";
 import { getMyInvoiceById } from "@/lib/data";
 import { formatEurForLocale } from "@/lib/locale-format";
 import { getInvoiceFileAccess } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { Link } from "@/i18n/navigation";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 
 export default async function EmployeeInvoiceDetailPage({
@@ -50,12 +51,17 @@ export default async function EmployeeInvoiceDetailPage({
             {invoice.tool?.name ?? tInvoice("tool")} · {amountFormatted}
           </p>
         </div>
-        <Link
-          href="/employee/invoices"
-          className={cn(buttonVariants({ variant: "outline" }))}
-        >
-          {t("backToInvoices")}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {invoice.status !== "approved" ? (
+            <DeleteInvoiceButton invoiceId={invoice.id} redirectToList />
+          ) : null}
+          <Link
+            href="/employee/invoices"
+            className={cn(buttonVariants({ variant: "outline" }))}
+          >
+            {t("backToInvoices")}
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

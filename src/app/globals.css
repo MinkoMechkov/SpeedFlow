@@ -147,6 +147,91 @@
   }
 }
 
+@keyframes scan-sweep {
+  0% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(44px);
+    opacity: 0.35;
+  }
+}
+
+@keyframes doc-rise {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -14;
+  }
+}
+
+@keyframes sparkle {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes illu-fade {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.upload-illu-scan {
+  animation: scan-sweep 1.8s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.upload-illu-doc-rise {
+  animation: doc-rise 2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.upload-illu-dash {
+  animation: dash-flow 0.9s linear infinite;
+}
+
+.upload-illu-sparkle {
+  animation: sparkle 1.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.upload-illu-sparkle-delay {
+  animation: sparkle 1.4s ease-in-out 0.35s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.upload-illu-fade {
+  animation: illu-fade 0.45s ease-out both;
+}
+
 .animate-rise {
   animation: rise-in 0.55s ease-out both;
 }
@@ -169,7 +254,13 @@
   .animate-rise,
   .animate-rise-delay,
   .animate-page,
-  .hero-glow {
+  .hero-glow,
+  .upload-illu-scan,
+  .upload-illu-doc-rise,
+  .upload-illu-dash,
+  .upload-illu-sparkle,
+  .upload-illu-sparkle-delay,
+  .upload-illu-fade {
     animation: none;
   }
 }

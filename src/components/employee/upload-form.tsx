@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UploadIllustration } from "@/components/employee/upload-illustration";
 import type { Tool } from "@/lib/types";
 
 const CUSTOM_TOOL = "__custom__";
@@ -183,7 +184,7 @@ export function UploadForm({ initialTools }: { initialTools: Tool[] }) {
       : t("uploadAnalyze");
 
   return (
-    <form onSubmit={onSubmit} className="max-w-xl space-y-5">
+    <form onSubmit={onSubmit} className="w-full space-y-5">
       <div className="space-y-2">
         <Label htmlFor="tool">{tCommon("tool")}</Label>
         <Select
@@ -239,7 +240,12 @@ export function UploadForm({ initialTools }: { initialTools: Tool[] }) {
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
       </div>
-      {loading && step ? <UploadSteps current={step} custom={isCustom} /> : null}
+      {loading && step ? (
+        <div className="space-y-3">
+          <UploadIllustration step={step} />
+          <UploadSteps current={step} custom={isCustom} />
+        </div>
+      ) : null}
       <Button type="submit" size="lg" loading={loading}>
         {buttonLabel}
       </Button>

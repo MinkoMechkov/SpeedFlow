@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { InvoiceStatusWatcher } from "@/components/employee/invoice-status-watcher";
 import { AppShell } from "@/components/layout/app-shell";
 import { requireSession } from "@/lib/auth";
 
@@ -27,6 +28,7 @@ export default async function EmployeeLayout({ children, params }: Props) {
 
   return (
     <AppShell session={session} nav={adminNav}>
+      <InvoiceStatusWatcher />
       {children}
     </AppShell>
   );

@@ -2,7 +2,7 @@
 
 Living checklist of what is done vs not. Update this as work lands.
 
-Last reviewed: 2026-10-08
+Last reviewed: 2026-10-08 (employee live updates + delete + upload anim)
 
 ---
 
@@ -50,6 +50,8 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Mark single employee as paid within the report range (cash vs bank batch)
 - [x] Pause / cancel / reactivate subscriptions (API + UI + audit; historical monthly_costs unchanged)
 - [x] Live admin pending queue (poll + toast + refresh when count changes)
+- [x] Live employee invoice status (poll + approve/reject toast + refresh)
+- [x] Employee can delete own non-approved invoices (API + RLS + storage cleanup)
 - [ ] Async extraction with `uploaded` / `extracting` status polling
 
 ---
@@ -78,8 +80,10 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Pause / cancel / reactivate on own subscriptions
 - [x] Invoices list (+ empty state)
 - [x] Upload form (+ custom tool)
+- [x] Animated upload illustration (tool / upload / analyze steps; reduced-motion safe)
 - [x] Reimbursement (current month)
 - [x] Invoice detail + file viewer + review notes
+- [x] Delete own invoice until approved (list + detail confirm dialog)
 - [ ] Create / edit own subscription fields beyond status (plan, dates, etc.)
 
 ---
@@ -124,6 +128,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Higher-contrast `--brand-deep` (#6b7748) for links and text; sticky blurred header; active nav state + `useLinkStatus` pending bar
 - [x] Skeleton loading states (`loading.tsx`) for all admin and employee routes
 - [x] `Button` `loading` prop (spinner + disabled) wired into all async actions; step-by-step upload status (upload → AI analysis)
+- [x] Animated SVG upload illustration tied to upload steps
 - [x] Faster auth: `cache()`-deduped `getSessionUser`, `getClaims()` (local ES256 JWT verify) in auth + middleware, no role DB query in middleware
 - [x] Snappier page transition (150ms) and `prefers-reduced-motion` support
 - [x] Keep admin/employee shells mounted across navigations (page `template` under each area, not root) so pending-queue poller does not remount and re-hit auth/DB on every transition
@@ -144,7 +149,7 @@ Upload → Analyze → Review → Calculate → Report
 - [ ] Supabase seed for subscriptions / sample invoices
 - [ ] Local Supabase CLI config / automated migrate in CI
 - [ ] Broader tests (validate, extract, APIs, RLS, e2e)
-- [ ] Storage DELETE policy
+- [x] Storage DELETE policy (`invoices_storage_delete` + employee own non-approved invoice delete)
 
 ---
 
