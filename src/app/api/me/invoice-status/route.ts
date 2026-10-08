@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUserNoRefresh } from "@/lib/auth";
 import { getMyInvoiceStatuses } from "@/lib/data";
 
 export async function GET() {
-  const session = await getSessionUser();
+  // No token refresh — avoids racing mutations that refresh the session.
+  const session = await getSessionUserNoRefresh();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

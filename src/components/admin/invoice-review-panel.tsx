@@ -84,8 +84,8 @@ export function InvoiceReviewPanel({
             : t("editsSaved"),
       );
       if (action !== "edit") {
-        router.push("/admin/invoices");
-        router.refresh();
+        // replace so a back-nav doesn't return to the now-read-only review
+        router.replace("/admin/invoices");
       } else {
         router.refresh();
       }

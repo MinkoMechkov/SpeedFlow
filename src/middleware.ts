@@ -65,8 +65,7 @@ export async function middleware(request: NextRequest) {
     return handleI18n(request);
   }
 
-  const i18nResponse = handleI18n(request);
-  let response = i18nResponse;
+  let response = handleI18n(request);
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
@@ -77,7 +76,7 @@ export async function middleware(request: NextRequest) {
       getAll() {
         return request.cookies.getAll();
       },
-      setAll(cookiesToSet) {
+      setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
@@ -85,17 +84,31 @@ export async function middleware(request: NextRequest) {
         cookiesToSet.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
+        Object.entries(headers).forEach(([header, value]) => {
+          response.headers.set(header, value);
+        });
       },
     },
   });
 
+  // Must run immediately after createServerClient so token refresh cookies
+  // land on `response` before we return or redirect.
   const { data } = await supabase.auth.getClaims();
 
   if (!data?.claims.sub) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = `/${locale}/login`;
     loginUrl.searchParams.set("next", pathWithoutLocale);
-    return NextResponse.redirect(loginUrl);
+    const redirect = NextResponse.redirect(loginUrl);
+    // Preserve any cookie writes from a failed/partial refresh.
+    response.cookies.getAll().forEach((cookie) => {
+      redirect.cookies.set(cookie.name, cookie.value);
+    });
+    for (const header of ["Cache-Control", "Expires", "Pragma"] as const) {
+      const value = response.headers.get(header);
+      if (value) redirect.headers.set(header, value);
+    }
+    return redirect;
   }
 
   return response;

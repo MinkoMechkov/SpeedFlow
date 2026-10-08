@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth";
+import { getSessionUserNoRefresh } from "@/lib/auth";
 import { getPendingReviewCount } from "@/lib/data";
 
 export async function GET() {
-  const session = await getSessionUser();
+  // No token refresh — avoids racing approve/reject refresh-token rotation.
+  const session = await getSessionUserNoRefresh();
   if (!session || session.employee.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
