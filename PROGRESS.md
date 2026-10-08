@@ -84,6 +84,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Reimbursement (current month; unpaid approved vs paid split, status column; no subscription-estimate fallback)
 - [x] Invoice detail + file viewer + review notes
 - [x] Delete own invoice until approved (list + detail confirm dialog)
+- [x] First-login onboarding tour (employee steps; replay from user menu)
 - [ ] Create / edit own subscription fields beyond status (plan, dates, etc.)
 
 ---
@@ -101,6 +102,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Report range picker (1 / 2 / 3 months)
 - [x] Tool catalog CRUD (`/admin/tools`; delete blocked if referenced)
 - [x] Pending-count watcher toast on new uploads / remote reviews
+- [x] First-login onboarding tour (admin steps; replay from user menu)
 - [ ] Demo store reset UI/API
 
 ---
@@ -153,6 +155,7 @@ Upload → Analyze → Review → Calculate → Report
 - [ ] Local Supabase CLI config / automated migrate in CI
 - [ ] Broader tests (validate, extract, APIs, RLS, e2e)
 - [x] Storage DELETE policy (`invoices_storage_delete` + employee own non-approved invoice delete)
+- [x] `user_onboarding` table + RLS (own select/insert/update) for tour completion; `TOUR_VERSION` in `src/lib/onboarding.ts`
 
 ---
 

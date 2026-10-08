@@ -4,7 +4,7 @@ import { useLinkStatus } from "next/link";
 import { cn } from "cn";
 import { Link, usePathname } from "@/i18n/navigation";
 
-type NavItem = { href: string; label: string };
+export type NavItem = { href: string; label: string; tourId?: string };
 
 function activeHref(pathname: string, items: NavItem[]) {
   let best: string | null = null;
@@ -45,6 +45,7 @@ export function NavLinks({
         key={item.href}
         href={item.href}
         aria-current={active ? "page" : undefined}
+        data-tour={item.tourId}
         className={cn(
           "relative shrink-0 rounded-md px-3 py-1.5 transition",
           variant === "desktop" ? "text-sm" : "text-xs font-medium",

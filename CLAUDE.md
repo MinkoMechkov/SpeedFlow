@@ -55,4 +55,5 @@ Supabase schema lives in `supabase/migrations/*.sql`. There is no local Supabase
 - Areas: `/employee/*` and `/admin/*`, each with its own `layout.tsx` + `template.tsx`. The template sits under each area rather than at the root, so the app shell and pollers stay mounted across navigations.
 - Every route has a `loading.tsx` skeleton (`src/components/page-skeletons.tsx`).
 - Live updates use polling, not realtime: `pending-queue-watcher.tsx` polls `/api/admin/pending-count`, and `invoice-status-watcher.tsx` polls `/api/me/invoice-status`.
+- First-login spotlight tour (`driver.js`) is mounted in the employee/admin layouts via `OnboardingTour`. Targets use `data-tour` attributes on nav items / mobile menu / user menu. Completion is stored in `user_onboarding` (demo: `store.onboarding`) and cached in `localStorage`. Bump `TOUR_VERSION` in `src/lib/onboarding.ts` to re-show after a major UI change. Replay from the user menu.
 - `Button` has a `loading` prop for async actions. Toasts use `sonner`.

@@ -1361,3 +1361,48 @@ export async function deleteMyInvoice(input: {
   });
 }
 
+export async function getTourStatus(
+  session: SessionUser,
+): Promise<{ completedVersion: number | null }> {
+  if (isDemoMode()) {
+    const version = getDemoStore().onboarding[session.employee.id];
+    return { completedVersion: version ?? null };
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("user_onboarding")
+    .select("tour_version")
+    .eq("employee_id", session.employee.id)
+    .maybeSingle();
+  if (error) throw error;
+  return {
+    completedVersion:
+      data?.tour_version != null ? Number(data.tour_version) : null,
+  };
+}
+
+export async function markTourCompleted(
+  session: SessionUser,
+  version: number,
+): Promise<void> {
+  if (!Number.isInteger(version) || version < 1) {
+    throw new Error("Invalid tour version");
+  }
+
+  if (isDemoMode()) {
+    getDemoStore().onboarding[session.employee.id] = version;
+    return;
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("user_onboarding").upsert(
+    {
+      employee_id: session.employee.id,
+      tour_version: version,
+      completed_at: now(),
+    },
+    { onConflict: "employee_id" },
+  );
+  if (error) throw error;
+}
+

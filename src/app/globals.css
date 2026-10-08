@@ -272,3 +272,63 @@
 .hero-glow {
   animation: soft-pulse 5s ease-in-out infinite;
 }
+
+/* driver.js onboarding tour — solid popover (no translucency) */
+.spendflow-tour-popover.driver-popover {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: var(--foreground);
+  opacity: 1 !important;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 40px -16px rgba(28, 36, 20, 0.28);
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+.spendflow-tour-popover.driver-popover * {
+  opacity: 1;
+}
+
+.spendflow-tour-popover .driver-popover-title {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-size: 1.125rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--brand-deep, #3d4a2c);
+  opacity: 1;
+}
+
+.spendflow-tour-popover .driver-popover-description {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #5c6554;
+  opacity: 1;
+}
+
+.spendflow-tour-popover .driver-popover-progress-text {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.spendflow-tour-popover .driver-popover-prev-btn,
+.spendflow-tour-popover .driver-popover-next-btn {
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  text-shadow: none;
+}
+
+.spendflow-tour-popover .driver-popover-next-btn {
+  background: var(--brand, #8a9a5b);
+  color: var(--ink, #1c2414);
+  border: 1px solid transparent;
+}
+
+.spendflow-tour-popover .driver-popover-prev-btn {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+.spendflow-tour-popover .driver-popover-close-btn {
+  color: var(--muted-foreground);
+}

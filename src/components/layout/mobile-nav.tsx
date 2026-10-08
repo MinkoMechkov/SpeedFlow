@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Menu } from "lucide-react";
 import { useLinkStatus } from "next/link";
@@ -12,9 +12,9 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Link, usePathname } from "@/i18n/navigation";
+import type { NavItem } from "@/components/layout/nav-links";
+import { MOBILE_NAV_TOUR_EVENT } from "@/lib/mobile-nav-tour";
 import { cn } from "cn";
-
-type NavItem = { href: string; label: string };
 
 function activeHref(pathname: string, items: NavItem[]) {
   let best: string | null = null;
@@ -40,7 +40,21 @@ export function MobileNav({ items }: { items: NavItem[] }) {
   const t = useTranslations("Common");
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // Opened by the onboarding tour: keep the sheet non-modal so its focus
+  // trap and outside-press dismissal don't fight the tour popover.
+  const [tourDriven, setTourDriven] = useState(false);
   const current = activeHref(pathname, items);
+
+  useEffect(() => {
+    function onTourNav(event: Event) {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
+      if (typeof detail?.open !== "boolean") return;
+      setOpen(detail.open);
+      setTourDriven(detail.open);
+    }
+    window.addEventListener(MOBILE_NAV_TOUR_EVENT, onTourNav);
+    return () => window.removeEventListener(MOBILE_NAV_TOUR_EVENT, onTourNav);
+  }, []);
 
   return (
     <>
@@ -50,18 +64,31 @@ export function MobileNav({ items }: { items: NavItem[] }) {
         size="icon-sm"
         className="md:hidden"
         aria-label={t("menu")}
-        onClick={() => setOpen(true)}
+        data-tour="mobile-menu"
+        onClick={() => {
+          setTourDriven(false);
+          setOpen(true);
+        }}
       >
         <Menu className="size-5" />
       </Button>
-      <Sheet open={open} onOpenChange={setOpen}>
+      <Sheet
+        open={open}
+        onOpenChange={setOpen}
+        modal={!tourDriven}
+        disablePointerDismissal={tourDriven}
+      >
         <SheetContent side="left" className="w-[min(100%,18rem)] gap-0 p-0">
           <SheetHeader className="border-b border-border/70">
             <SheetTitle className="font-[family-name:var(--font-display)] text-lg tracking-tight text-[var(--brand-deep)]">
               SpendFlow
             </SheetTitle>
           </SheetHeader>
-          <nav className="flex flex-col gap-1 p-3" aria-label={t("menu")}>
+          <nav
+            data-mobile-nav
+            className="flex flex-col gap-1 p-3"
+            aria-label={t("menu")}
+          >
             {items.map((item) => {
               const active = item.href === current;
               return (
@@ -69,6 +96,7 @@ export function MobileNav({ items }: { items: NavItem[] }) {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "page" : undefined}
+                  data-tour={item.tourId}
                   onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center rounded-lg px-3 py-2.5 text-sm transition",

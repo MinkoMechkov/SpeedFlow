@@ -21,6 +21,8 @@ export type DemoStore = {
   extractions: InvoiceExtraction[];
   monthlyCosts: MonthlyCost[];
   auditLogs: AuditLog[];
+  /** employee_id → completed tour_version */
+  onboarding: Record<string, number>;
 };
 
 function now() {
@@ -295,12 +297,17 @@ function seed(): DemoStore {
     extractions,
     monthlyCosts,
     auditLogs: [],
+    onboarding: {},
   };
 }
 
 export function getDemoStore(): DemoStore {
   if (!g.__spendflowDemo) {
     g.__spendflowDemo = seed();
+  }
+  // Hot reload / older in-memory seeds may lack this field.
+  if (!g.__spendflowDemo.onboarding) {
+    g.__spendflowDemo.onboarding = {};
   }
   return g.__spendflowDemo;
 }

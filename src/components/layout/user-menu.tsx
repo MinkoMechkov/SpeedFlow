@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, HelpCircle, LogOut } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTour } from "@/components/onboarding/tour-context";
 import { useRouter } from "@/i18n/navigation";
 
 export function UserMenu({
@@ -19,7 +20,9 @@ export function UserMenu({
   roleLabel: string;
 }) {
   const t = useTranslations("Common");
+  const tTour = useTranslations("Tour");
   const router = useRouter();
+  const tour = useTour();
   const [loading, setLoading] = useState(false);
 
   async function signOut() {
@@ -43,6 +46,7 @@ export function UserMenu({
         openOnHover
         delay={80}
         closeDelay={120}
+        data-tour="user-menu"
         className="group flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted/60"
       >
         <span className="min-w-0">
@@ -60,6 +64,12 @@ export function UserMenu({
         sideOffset={6}
         className="w-auto min-w-40"
       >
+        {tour ? (
+          <DropdownMenuItem onClick={() => tour.startTour()}>
+            <HelpCircle className="size-4" />
+            {tTour("replayTour")}
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem
           variant="destructive"
           disabled={loading}

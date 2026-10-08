@@ -3,7 +3,7 @@ import type { SessionUser } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { NavLinks } from "@/components/layout/nav-links";
+import { NavLinks, type NavItem } from "@/components/layout/nav-links";
 import { UserMenu } from "@/components/layout/user-menu";
 
 export async function AppShell({
@@ -12,7 +12,7 @@ export async function AppShell({
   children,
 }: {
   session: SessionUser;
-  nav: Array<{ href: string; label: string }>;
+  nav: NavItem[];
   children: React.ReactNode;
 }) {
   const t = await getTranslations("Common");
@@ -32,7 +32,10 @@ export async function AppShell({
             >
               SpendFlow
             </Link>
-            <nav className="ml-5 hidden items-center gap-1 md:flex">
+            <nav
+              data-desktop-nav
+              className="ml-5 hidden items-center gap-1 md:flex"
+            >
               <NavLinks items={nav} variant="desktop" />
             </nav>
           </div>
