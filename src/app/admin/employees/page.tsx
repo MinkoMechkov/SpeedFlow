@@ -45,7 +45,7 @@ export default async function AdminEmployeesPage() {
                 <TableCell>
                   <Link
                     href={`/admin/employees/${row.employee.id}`}
-                    className="font-medium text-[var(--brand)]"
+                    className="font-medium text-[var(--brand-deep)] hover:underline"
                   >
                     {row.employee.name}
                   </Link>

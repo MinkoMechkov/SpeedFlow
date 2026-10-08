@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/register-form";
-import { buttonVariants } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth";
 import { isDemoMode } from "@/lib/mode";
-import { cn } from "@/lib/utils";
 
 const FLOW = ["Upload", "Analyze", "Review", "Calculate", "Report"] as const;
+
+const FLOW_HINTS = [
+  "Employee attaches an invoice",
+  "AI reads amount and period",
+  "Admin checks flags and approves",
+  "Monthly cost rolls up in EUR",
+  "Finance gets a clean payout list",
+] as const;
 
 export default async function HomePage() {
   const session = await getSessionUser();
@@ -19,69 +25,91 @@ export default async function HomePage() {
   const demo = isDemoMode();
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex h-full min-h-0 flex-col">
       <div className="hero-glow pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-[color-mix(in_oklab,var(--brand)_35%,transparent)] blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[color-mix(in_oklab,#c4a35a_18%,transparent)] blur-3xl" />
 
-      <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-12 px-6 py-16 lg:flex-row lg:items-center lg:justify-between">
-        <div className="max-w-xl">
-          <p className="animate-rise font-[family-name:var(--font-display)] text-5xl tracking-tight text-[var(--brand)] sm:text-7xl">
-            SpendFlow
-          </p>
-          <h1 className="animate-rise-delay mt-4 text-2xl font-medium tracking-tight text-foreground sm:text-3xl">
-            Subscription invoices in. Monthly reimbursements out.
-          </h1>
-          <p className="animate-rise-delay mt-4 text-muted-foreground">
-            Employees upload invoices in their own lane. Finance reviews once
-            and exports a clean monthly reimbursement report.
-          </p>
+      <header className="relative z-10 mx-auto flex w-full max-w-5xl shrink-0 items-center justify-end px-6 pt-5 pb-1">
+        <Link
+          href="/login"
+          className="text-sm font-medium text-[var(--brand-deep)] underline-offset-4 transition hover:underline"
+        >
+          Sign in
+        </Link>
+      </header>
 
-          <ol className="animate-rise-delay mt-8 flex flex-wrap items-center gap-2">
-            {FLOW.map((step, index) => (
-              <li key={step} className="flex items-center gap-2">
-                <span className="rounded-full border border-[color-mix(in_oklab,var(--brand)_55%,transparent)] bg-[color-mix(in_oklab,var(--brand)_18%,white)] px-3 py-1 text-xs font-medium text-foreground">
-                  {step}
-                </span>
-                {index < FLOW.length - 1 ? (
-                  <span className="text-muted-foreground" aria-hidden>
-                    →
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ol>
+      <main className="relative flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-6">
+        <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-[1fr_minmax(0,24rem)] lg:items-center lg:gap-16">
+          <div className="max-w-xl">
+            <p className="animate-rise font-[family-name:var(--font-display)] text-5xl tracking-tight text-[var(--brand)] sm:text-6xl">
+              SpendFlow
+            </p>
+            <h1 className="animate-rise-delay mt-3 text-xl font-medium tracking-tight text-foreground sm:text-2xl">
+              Subscription invoices in. Monthly reimbursements out.
+            </h1>
+            <p className="animate-rise-delay mt-3 max-w-md text-sm text-muted-foreground sm:text-base">
+              Employees upload invoices in their own lane. Finance reviews once
+              and exports a clean monthly reimbursement report.
+            </p>
 
-          <div className="animate-rise-delay mt-8 flex flex-wrap gap-3">
-            <Link href="/login" className={cn(buttonVariants({ size: "lg" }))}>
-              Sign in
-            </Link>
-            {demo ? (
-              <Link
-                href="/login"
-                className={cn(
-                  buttonVariants({ variant: "outline", size: "lg" }),
-                )}
-              >
-                Demo personas
-              </Link>
-            ) : null}
+            <ol className="animate-rise-delay mt-6 space-y-0">
+              {FLOW.map((step, index) => {
+                const last = index === FLOW.length - 1;
+                return (
+                  <li key={step} className="flex gap-3">
+                    <div className="flex w-6 shrink-0 flex-col items-center">
+                      <span className="flex size-6 items-center justify-center rounded-full bg-[var(--brand)] text-[11px] font-semibold text-[var(--ink)]">
+                        {index + 1}
+                      </span>
+                      {!last ? (
+                        <span
+                          className="mt-1 w-px flex-1 bg-[color-mix(in_oklab,var(--brand)_45%,transparent)]"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </div>
+                    <div className={last ? "pb-0 pt-0.5" : "pb-3 pt-0.5"}>
+                      <p className="text-sm font-medium text-foreground">
+                        {step}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {FLOW_HINTS[index]}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
-        </div>
 
-        <div className="animate-rise-delay w-full max-w-md shrink-0">
-          <div className="rounded-2xl border border-border/80 bg-card/80 p-6 shadow-sm backdrop-blur">
-            {demo ? (
-              <div className="text-sm text-muted-foreground">
-                Registration is available when Supabase mode is on (
-                <code className="text-xs">DEMO_MODE=false</code>). Use{" "}
-                <Link href="/login" className="text-[var(--brand-deep)]">
-                  Login
-                </Link>{" "}
-                to pick a demo persona.
-              </div>
-            ) : (
-              <RegisterForm />
-            )}
+          <div
+            id="register"
+            className="animate-rise-delay w-full scroll-mt-8"
+          >
+            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 shadow-[0_8px_30px_-12px_rgba(28,36,20,0.18)] backdrop-blur sm:p-6">
+              {demo ? (
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="font-[family-name:var(--font-display)] text-2xl tracking-tight">
+                      Try the demo
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Registration needs Supabase mode (
+                      <code className="text-xs">DEMO_MODE=false</code>). Pick a
+                      persona to explore the product now.
+                    </p>
+                  </div>
+                  <Link
+                    href="/login"
+                    className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    Open demo personas
+                  </Link>
+                </div>
+              ) : (
+                <RegisterForm />
+              )}
+            </div>
           </div>
         </div>
       </main>

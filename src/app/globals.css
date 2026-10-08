@@ -50,7 +50,7 @@
 
 :root {
   --brand: #b1be89;
-  --brand-deep: #8f9c6a;
+  --brand-deep: #6b7748;
   --ink: #1c2414;
   --background: #f7f8f3;
   --foreground: #1c2414;
@@ -124,8 +124,54 @@
   }
 }
 
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes nav-pending-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes nav-pending-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .animate-rise {
   animation: rise-in 0.55s ease-out both;
+}
+
+.animate-page {
+  animation: page-in 0.15s ease-out both;
+}
+
+.nav-pending {
+  opacity: 0;
+}
+
+.nav-pending.is-pending {
+  animation:
+    nav-pending-in 150ms ease 100ms forwards,
+    nav-pending-pulse 1s ease-in-out 250ms infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-delay,
+  .animate-page,
+  .hero-glow {
+    animation: none;
+  }
 }
 
 .animate-rise-delay {

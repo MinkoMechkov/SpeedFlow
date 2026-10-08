@@ -46,15 +46,7 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto w-full max-w-md space-y-4">
-      <div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-tight">
-          Set new password
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Choose a new password for your SpendFlow account.
-        </p>
-      </div>
+    <form onSubmit={onSubmit} className="w-full space-y-5">
       <div className="space-y-2">
         <Label htmlFor="password">New password</Label>
         <Input
@@ -79,13 +71,13 @@ export function ResetPasswordForm() {
           required
         />
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" size="lg" className="h-11 w-full" loading={loading}>
         {loading ? "Saving…" : "Update password"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
         <Link
           href="/login"
-          className="text-[var(--brand)] underline-offset-2 hover:underline"
+          className="font-medium text-[var(--brand-deep)] underline-offset-4 hover:underline"
         >
           Back to sign in
         </Link>

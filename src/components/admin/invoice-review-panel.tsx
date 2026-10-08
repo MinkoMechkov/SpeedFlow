@@ -195,12 +195,17 @@ export function InvoiceReviewPanel({
           </div>
           {!readOnly ? (
             <div className="flex flex-wrap gap-2 pt-2">
-              <Button disabled={!!loading} onClick={() => submit("approve")}>
+              <Button
+                disabled={!!loading}
+                loading={loading === "approve"}
+                onClick={() => submit("approve")}
+              >
                 {loading === "approve" ? "Approving…" : "Approve"}
               </Button>
               <Button
                 variant="outline"
                 disabled={!!loading}
+                loading={loading === "edit"}
                 onClick={() => submit("edit")}
               >
                 {loading === "edit" ? "Saving…" : "Save edits"}
@@ -208,6 +213,7 @@ export function InvoiceReviewPanel({
               <Button
                 variant="destructive"
                 disabled={!!loading}
+                loading={loading === "reject"}
                 onClick={() => submit("reject")}
               >
                 {loading === "reject" ? "Rejecting…" : "Reject"}

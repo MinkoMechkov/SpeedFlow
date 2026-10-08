@@ -117,7 +117,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
             placeholder="Anysphere"
           />
         </div>
-        <Button type="submit" disabled={creating}>
+        <Button type="submit" loading={creating}>
           {creating ? "Adding…" : "Add tool"}
         </Button>
       </form>
@@ -167,7 +167,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
                         <>
                           <Button
                             size="sm"
-                            disabled={busyId === tool.id}
+                            loading={busyId === tool.id}
                             onClick={() => saveEdit(tool.id)}
                           >
                             Save
@@ -192,7 +192,7 @@ export function ToolsCatalog({ tools }: { tools: Tool[] }) {
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={busyId === tool.id}
+                            loading={busyId === tool.id}
                             onClick={() => removeTool(tool.id)}
                           >
                             Delete

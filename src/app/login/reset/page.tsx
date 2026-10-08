@@ -1,40 +1,35 @@
+import Link from "next/link";
+import { AuthShell } from "@/components/auth-shell";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 import { isDemoMode } from "@/lib/mode";
-import Link from "next/link";
 
 export default function ResetPasswordPage() {
   if (isDemoMode()) {
     return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-12">
-        <Link
-          href="/"
-          className="mb-4 text-sm text-muted-foreground transition hover:text-[var(--brand)]"
-        >
-          ← Back to home
-        </Link>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl tracking-tight">
-          Password reset
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Not available in demo mode. Use a demo persona on{" "}
-          <Link href="/login" className="text-[var(--brand)]">
-            Login
+      <AuthShell
+        title="Password reset"
+        subtitle="Not available in demo mode."
+      >
+        <p className="text-sm text-muted-foreground">
+          Use a demo persona on the{" "}
+          <Link
+            href="/login"
+            className="font-medium text-[var(--brand-deep)] underline-offset-4 hover:underline"
+          >
+            sign-in page
           </Link>
           .
         </p>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-6 py-12">
-      <Link
-        href="/"
-        className="mb-4 text-sm text-muted-foreground transition hover:text-[var(--brand)]"
-      >
-        ← Back to home
-      </Link>
+    <AuthShell
+      title="Set new password"
+      subtitle="Choose a new password for your SpendFlow account."
+    >
       <ResetPasswordForm />
-    </div>
+    </AuthShell>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EmployeeManageForm } from "@/components/admin/employee-manage-form";
 import {
@@ -98,21 +99,45 @@ export default async function AdminEmployeeDetailPage({
                 <TableHead>Tool</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {detail.invoices.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell>{inv.invoice_number ?? inv.file_name}</TableCell>
-                  <TableCell>{inv.tool?.name}</TableCell>
-                  <TableCell className="tabular-nums">
-                    {formatEur(inv.amount)}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={inv.status} />
+              {detail.invoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-muted-foreground">
+                    No invoices for this employee.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                detail.invoices.map((inv) => (
+                  <TableRow key={inv.id}>
+                    <TableCell>
+                      <Link
+                        href={`/admin/invoices/${inv.id}`}
+                        className="font-medium text-[var(--brand-deep)] hover:underline"
+                      >
+                        {inv.invoice_number ?? inv.file_name ?? "Invoice"}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{inv.tool?.name}</TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatEur(inv.amount)}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={inv.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link
+                        href={`/admin/invoices/${inv.id}`}
+                        className="text-sm text-[var(--brand-deep)] hover:underline"
+                      >
+                        Open
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

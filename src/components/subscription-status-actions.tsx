@@ -63,9 +63,10 @@ export function SubscriptionStatusActions({
           size="sm"
           variant={action.status === "cancelled" ? "outline" : "secondary"}
           disabled={loading != null}
+          loading={loading === action.status}
           onClick={() => changeStatus(action.status)}
         >
-          {loading === action.status ? "…" : action.label}
+          {action.label}
         </Button>
       ))}
     </div>

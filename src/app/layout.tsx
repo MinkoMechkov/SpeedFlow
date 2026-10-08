@@ -26,9 +26,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${display.variable} ${body.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col font-[family-name:var(--font-body)]">
-        {children}
-        <SiteFooter />
+      <body className="font-[family-name:var(--font-body)]">
+        <div className="grid h-dvh grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
+          <div className="flex min-h-0 flex-col overflow-y-auto">
+            {children}
+          </div>
+          <SiteFooter />
+        </div>
         <Toaster />
       </body>
     </html>

@@ -61,30 +61,16 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
 
-  if (!user) {
+  if (!data?.claims.sub) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname.startsWith("/admin")) {
-    const { data: employee } = await supabase
-      .from("employees")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (employee?.role !== "admin") {
-      const home = request.nextUrl.clone();
-      home.pathname = "/employee/subscriptions";
-      return NextResponse.redirect(home);
-    }
-  }
-
+  // Role checks live in the admin layout (requireAdmin) to avoid a DB query per request.
   return response;
 }
 

@@ -9,7 +9,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = (await request.json()) as { months?: number };
+    const body = (await request.json()) as {
+      months?: number;
+      employeeId?: string;
+    };
     const months = Number(body.months ?? 1);
     if (![1, 2, 3].includes(months)) {
       return NextResponse.json(
@@ -17,7 +20,15 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const result = await markMonthlyCostsPaid({ session, months });
+    const employeeId =
+      typeof body.employeeId === "string" && body.employeeId.trim()
+        ? body.employeeId.trim()
+        : undefined;
+    const result = await markMonthlyCostsPaid({
+      session,
+      months,
+      employeeId,
+    });
     return NextResponse.json(result);
   } catch (error) {
     console.error(error);

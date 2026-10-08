@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDemoStore } from "@/lib/demo/store";
@@ -7,7 +8,7 @@ import type { Employee, SessionUser } from "@/lib/types";
 
 export const DEMO_SESSION_COOKIE = "spendflow_demo_session";
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   if (isDemoMode()) {
     const cookieStore = await cookies();
     const employeeId = cookieStore.get(DEMO_SESSION_COOKIE)?.value;
@@ -18,20 +19,19 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   }
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  const { data } = await supabase.auth.getClaims();
+  const userId = data?.claims.sub;
+  if (!userId) return null;
 
   const { data: employee, error } = await supabase
     .from("employees")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error || !employee) return null;
   return { employee: employee as Employee, mode: "supabase" };
-}
+});
 
 export async function requireSession(): Promise<SessionUser> {
   const session = await getSessionUser();

@@ -111,7 +111,7 @@ export function EmployeeManageForm({ employee }: { employee: Employee }) {
           </Select>
         </div>
       </div>
-      <Button type="submit" disabled={loading} className="cursor-pointer">
+      <Button type="submit" loading={loading} className="cursor-pointer">
         {loading ? "Saving…" : "Save changes"}
       </Button>
     </form>

@@ -62,7 +62,7 @@ export default async function AdminDashboardPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Pending reviews</h2>
-          <Link href="/admin/invoices" className="text-sm text-[var(--brand)]">
+          <Link href="/admin/invoices" className="text-sm text-[var(--brand-deep)] hover:underline">
             View all
           </Link>
         </div>
@@ -96,7 +96,7 @@ export default async function AdminDashboardPage() {
                     <TableCell className="text-right">
                       <Link
                         href={`/admin/invoices/${inv.id}`}
-                        className="text-sm text-[var(--brand)]"
+                        className="text-sm text-[var(--brand-deep)] hover:underline"
                       >
                         Review
                       </Link>
@@ -127,7 +127,7 @@ export default async function AdminDashboardPage() {
                   <TableCell>
                     <Link
                       href={`/admin/employees/${row.employee.id}`}
-                      className="font-medium text-[var(--brand)]"
+                      className="font-medium text-[var(--brand-deep)] hover:underline"
                     >
                       {row.employee.name}
                     </Link>

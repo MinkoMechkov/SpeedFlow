@@ -19,7 +19,7 @@ export function InvoiceFilePreview({ file }: { file: InvoiceFileAccess }) {
           href={file.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-[var(--brand)] underline-offset-2 hover:underline"
+          className="text-sm text-[var(--brand-deep)] underline-offset-2 hover:underline"
         >
           Download{file.fileName ? ` · ${file.fileName}` : ""}
         </a>

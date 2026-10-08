@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,55 @@ import type { Tool } from "@/lib/types";
 
 const CUSTOM_TOOL = "__custom__";
 
+type StepId = "tool" | "upload" | "analyze";
+
+const STEPS: Array<{ id: StepId; label: string }> = [
+  { id: "tool", label: "Saving custom tool" },
+  { id: "upload", label: "Uploading file" },
+  { id: "analyze", label: "Reading invoice with AI" },
+];
+
+const BUTTON_LABEL: Record<StepId, string> = {
+  tool: "Saving tool…",
+  upload: "Uploading…",
+  analyze: "Analyzing invoice…",
+};
+
+function UploadSteps({ current, custom }: { current: StepId; custom: boolean }) {
+  const steps = custom ? STEPS : STEPS.filter((s) => s.id !== "tool");
+  const currentIndex = steps.findIndex((s) => s.id === current);
+  return (
+    <ol
+      aria-live="polite"
+      className="space-y-2 rounded-lg border border-border/70 bg-muted/40 p-4 text-sm"
+    >
+      {steps.map((s, i) => {
+        const done = i < currentIndex;
+        const active = i === currentIndex;
+        return (
+          <li key={s.id} className="flex items-center gap-2.5">
+            {done ? (
+              <CheckCircle2 className="size-4 text-[var(--brand-deep)]" aria-hidden />
+            ) : active ? (
+              <Loader2 className="size-4 animate-spin text-[var(--brand-deep)]" aria-hidden />
+            ) : (
+              <Circle className="size-4 text-muted-foreground/50" aria-hidden />
+            )}
+            <span className={active ? "font-medium" : done ? "" : "text-muted-foreground"}>
+              {s.label}
+            </span>
+          </li>
+        );
+      })}
+      {current === "analyze" ? (
+        <li className="pl-6.5 text-xs text-muted-foreground">
+          This usually takes a few seconds.
+        </li>
+      ) : null}
+    </ol>
+  );
+}
+
 function toolLabel(tool: Tool) {
   return `${tool.name} · ${tool.vendor}`;
 }
@@ -29,6 +79,7 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
   const [customVendor, setCustomVendor] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<StepId | null>(null);
 
   const isCustom = toolId === CUSTOM_TOOL;
 
@@ -50,6 +101,7 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
     }
 
     setLoading(true);
+    let analyzeTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       let resolvedToolId = toolId;
 
@@ -60,6 +112,7 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
           setLoading(false);
           return;
         }
+        setStep("tool");
         const res = await fetch("/api/tools", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -81,12 +134,15 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
       if (!resolvedToolId || resolvedToolId === CUSTOM_TOOL) {
         toast.error("Select a tool");
         setLoading(false);
+        setStep(null);
         return;
       }
 
       const form = new FormData();
       form.set("toolId", resolvedToolId);
       form.set("file", file);
+      setStep("upload");
+      analyzeTimer = setTimeout(() => setStep("analyze"), 1200);
       const res = await fetch("/api/invoices/upload", {
         method: "POST",
         body: form,
@@ -98,8 +154,10 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed");
-    } finally {
       setLoading(false);
+      setStep(null);
+    } finally {
+      clearTimeout(analyzeTimer);
     }
   }
 
@@ -163,8 +221,9 @@ export function UploadForm({ tools: initialTools }: { tools: Tool[] }) {
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
       </div>
-      <Button type="submit" disabled={loading}>
-        {loading ? "Analyzing…" : "Upload & analyze"}
+      {loading && step ? <UploadSteps current={step} custom={isCustom} /> : null}
+      <Button type="submit" size="lg" loading={loading}>
+        {loading && step ? BUTTON_LABEL[step] : "Upload & analyze"}
       </Button>
     </form>
   );

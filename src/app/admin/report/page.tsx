@@ -121,12 +121,13 @@ export default async function AdminReportPage({
               <TableHead className="text-right">Unpaid</TableHead>
               <TableHead className="text-right">Paid</TableHead>
               <TableHead className="text-right">Total</TableHead>
+              <TableHead className="w-[120px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {report.rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-muted-foreground">
+                <TableCell colSpan={5} className="text-muted-foreground">
                   No monthly costs in this range.
                 </TableCell>
               </TableRow>
@@ -143,6 +144,15 @@ export default async function AdminReportPage({
                   <TableCell className="text-right tabular-nums">
                     {formatEur(row.amount)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <MarkPaidButton
+                      months={span}
+                      unpaidTotal={row.approvedAmount}
+                      employeeId={row.employee.id}
+                      employeeName={row.employee.name}
+                      size="sm"
+                    />
+                  </TableCell>
                 </TableRow>
               ))
             )}
@@ -157,10 +167,16 @@ export default async function AdminReportPage({
               <TableCell className="text-right font-semibold tabular-nums">
                 {formatEur(report.total)}
               </TableCell>
+              <TableCell />
             </TableRow>
           </TableBody>
         </Table>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Use <span className="font-medium">Mark paid</span> on a row for cash /
+        one-off payouts. <span className="font-medium">Mark range as paid</span>{" "}
+        still covers everyone unpaid in the selected months (e.g. bank batch).
+      </p>
     </div>
   );
 }

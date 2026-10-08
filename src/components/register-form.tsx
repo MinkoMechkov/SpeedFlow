@@ -50,44 +50,44 @@ export function RegisterForm() {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="w-full max-w-md space-y-4 rounded-xl border border-border/80 bg-card/70 p-5"
-    >
+    <form onSubmit={onSubmit} className="w-full space-y-3.5">
       <div>
-        <h2 className="font-[family-name:var(--font-display)] text-2xl tracking-tight">
+        <h2 className="font-[family-name:var(--font-display)] text-xl tracking-tight sm:text-2xl">
           Create account
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           New accounts are employees. Only admins can grant admin access.
         </p>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="reg-name">Full name</Label>
         <Input
           id="reg-name"
+          className="h-9"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           autoComplete="name"
         />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="reg-email">Work email</Label>
         <Input
           id="reg-email"
           type="email"
+          className="h-9"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
         />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="reg-password">Password</Label>
         <Input
           id="reg-password"
           type="password"
+          className="h-9"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
@@ -95,21 +95,25 @@ export function RegisterForm() {
           autoComplete="new-password"
         />
       </div>
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <Label htmlFor="reg-dept">Department (optional)</Label>
         <Input
           id="reg-dept"
+          className="h-9"
           value={department}
           onChange={(e) => setDepartment(e.target.value)}
           autoComplete="organization-title"
         />
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Creating…" : "Register"}
+      <Button type="submit" size="lg" className="mt-1 h-10 w-full" loading={loading}>
+        {loading ? "Creating account…" : "Create account"}
       </Button>
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="border-t border-border/70 pt-3.5 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="text-[var(--brand)] underline-offset-2 hover:underline">
+        <Link
+          href="/login"
+          className="font-medium text-[var(--brand-deep)] underline-offset-4 hover:underline"
+        >
           Sign in
         </Link>
       </p>

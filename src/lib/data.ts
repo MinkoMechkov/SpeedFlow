@@ -669,6 +669,8 @@ export async function getReimbursementReport(input: {
 export async function markMonthlyCostsPaid(input: {
   session: SessionUser;
   months: number;
+  /** When set, only this employee's unpaid rows in the range are marked paid. */
+  employeeId?: string;
 }): Promise<{ updated: number }> {
   if (input.session.employee.role !== "admin") {
     throw new Error("Forbidden");
@@ -676,12 +678,17 @@ export async function markMonthlyCostsPaid(input: {
   const { recentMonthKeys } = await import("@/lib/invoices/calculate");
   const span = Math.max(1, Math.min(3, Math.floor(input.months)));
   const months = recentMonthKeys(span);
+  const employeeId = input.employeeId?.trim() || null;
 
   if (isDemoMode()) {
     const store = getDemoStore();
     let updated = 0;
     for (const cost of store.monthlyCosts) {
-      if (months.includes(cost.month) && cost.status !== "paid") {
+      if (
+        months.includes(cost.month) &&
+        cost.status !== "paid" &&
+        (!employeeId || cost.employee_id === employeeId)
+      ) {
         cost.status = "paid";
         updated += 1;
       }
@@ -692,20 +699,23 @@ export async function markMonthlyCostsPaid(input: {
       employee_id: input.session.employee.id,
       action: "monthly_costs_marked_paid",
       entity_type: "monthly_costs",
-      entity_id: null,
-      metadata: { months, updated },
+      entity_id: employeeId,
+      metadata: { months, updated, employeeId },
       created_at: now(),
     });
     return { updated };
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("monthly_costs")
     .update({ status: "paid" })
     .in("month", months)
-    .neq("status", "paid")
-    .select("id");
+    .neq("status", "paid");
+  if (employeeId) {
+    query = query.eq("employee_id", employeeId);
+  }
+  const { data, error } = await query.select("id");
   if (error) throw error;
 
   await supabase.from("audit_logs").insert({
@@ -713,8 +723,8 @@ export async function markMonthlyCostsPaid(input: {
     employee_id: input.session.employee.id,
     action: "monthly_costs_marked_paid",
     entity_type: "monthly_costs",
-    entity_id: null,
-    metadata: { months, updated: data?.length ?? 0 },
+    entity_id: employeeId,
+    metadata: { months, updated: data?.length ?? 0, employeeId },
   });
 
   return { updated: data?.length ?? 0 };

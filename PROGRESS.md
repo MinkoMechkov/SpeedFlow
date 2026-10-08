@@ -47,6 +47,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Invoice file preview / download on admin review (signed Storage URLs)
 - [x] Employee invoice file preview (own files)
 - [x] Mark reimbursements as paid (admin report range)
+- [x] Mark single employee as paid within the report range (cash vs bank batch)
 - [x] Pause / cancel / reactivate subscriptions (API + UI + audit; historical monthly_costs unchanged)
 - [x] Live admin pending queue (poll + toast + refresh when count changes)
 - [ ] Async extraction with `uploaded` / `extracting` status polling
@@ -90,7 +91,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Employees list + employee detail
 - [x] Employee manage form (name, department, role, active)
 - [x] Subscription lifecycle actions on employee detail
-- [x] Report page + CSV download + mark paid
+- [x] Report page + CSV download + mark paid (range or single employee)
 - [x] Invoice history filters (pending / approved / rejected / all)
 - [x] Report range picker (1 / 2 / 3 months)
 - [x] Tool catalog CRUD (`/admin/tools`; delete blocked if referenced)
@@ -106,6 +107,13 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Page transition via `src/app/template.tsx`
 - [x] Site footer (typographic SpendFlow credit)
 - [x] Parallelize admin employee-overview queries
+- [x] Login / reset redesign: two-column `AuthShell`, large full-width Sign in button with spinner, inline friendly errors, "Create one" register link
+- [x] Higher-contrast `--brand-deep` (#6b7748) for links and text; sticky blurred header; active nav state + `useLinkStatus` pending bar
+- [x] Skeleton loading states (`loading.tsx`) for all admin and employee routes
+- [x] `Button` `loading` prop (spinner + disabled) wired into all async actions; step-by-step upload status (upload → AI analysis)
+- [x] Faster auth: `cache()`-deduped `getSessionUser`, `getClaims()` (local ES256 JWT verify) in auth + middleware, no role DB query in middleware
+- [x] Snappier page transition (150ms) and `prefers-reduced-motion` support
+- [x] Keep admin/employee shells mounted across navigations (page `template` under each area, not root) so pending-queue poller does not remount and re-hit auth/DB on every transition
 
 ---
 

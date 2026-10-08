@@ -8,8 +8,11 @@ const POLL_MS = 12_000;
 
 export function PendingQueueWatcher() {
   const router = useRouter();
+  const routerRef = useRef(router);
   const previous = useRef<number | null>(null);
   const initialized = useRef(false);
+
+  routerRef.current = router;
 
   useEffect(() => {
     let cancelled = false;
@@ -40,9 +43,9 @@ export function PendingQueueWatcher() {
                 ? "New invoice pending review"
                 : `${added} new invoices pending review`,
             );
-            router.refresh();
+            routerRef.current.refresh();
           } else if (count < previous.current) {
-            router.refresh();
+            routerRef.current.refresh();
           }
         }
 
@@ -52,7 +55,7 @@ export function PendingQueueWatcher() {
         // Ignore transient network errors; retry on next tick.
       } finally {
         inFlight = false;
-        schedule();
+        if (!cancelled) schedule();
       }
     }
 
@@ -79,7 +82,7 @@ export function PendingQueueWatcher() {
       if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [router]);
+  }, []);
 
   return null;
 }

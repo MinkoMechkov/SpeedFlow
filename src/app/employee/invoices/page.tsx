@@ -73,7 +73,7 @@ export default async function EmployeeInvoicesPage() {
                   <TableCell className="text-right">
                     <Link
                       href={`/employee/invoices/${inv.id}`}
-                      className="text-sm text-[var(--brand)]"
+                      className="text-sm text-[var(--brand-deep)] hover:underline"
                     >
                       Open
                     </Link>
