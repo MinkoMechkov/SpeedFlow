@@ -43,7 +43,7 @@ export default async function HomePage({ params }: Props) {
   const demo = isDemoMode();
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col">
+    <div className="relative flex flex-1 flex-col overflow-x-clip">
       <div className="hero-glow pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-[color-mix(in_oklab,var(--brand)_35%,transparent)] blur-3xl" />
       <div className="pointer-events-none absolute bottom-0 right-0 h-80 w-80 rounded-full bg-[color-mix(in_oklab,#c4a35a_18%,transparent)] blur-3xl" />
 
@@ -57,7 +57,7 @@ export default async function HomePage({ params }: Props) {
         </Link>
       </header>
 
-      <main className="relative flex min-h-0 flex-1 flex-col justify-center overflow-y-auto px-6 py-6">
+      <main className="relative flex flex-1 flex-col justify-center px-6 py-6">
         <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-[1fr_minmax(0,24rem)] lg:items-center lg:gap-16">
           <div className="max-w-xl">
             <p className="animate-rise font-[family-name:var(--font-display)] text-5xl tracking-tight text-[var(--brand)] sm:text-6xl">

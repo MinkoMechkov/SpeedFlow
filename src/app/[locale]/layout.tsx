@@ -50,8 +50,8 @@ export default async function LocaleLayout({ children, params }: Props) {
     >
       <body className="font-[family-name:var(--font-body)]">
         <NextIntlClientProvider messages={messages}>
-          <div className="grid h-dvh grid-rows-[minmax(0,1fr)_auto] overflow-hidden">
-            <div className="flex min-h-0 flex-col overflow-y-auto">
+          <div className="flex h-dvh flex-col overflow-y-auto sm:grid sm:grid-rows-[minmax(0,1fr)_auto] sm:overflow-hidden">
+            <div className="flex flex-1 flex-col sm:min-h-0 sm:overflow-y-auto">
               {children}
             </div>
             <SiteFooter />
