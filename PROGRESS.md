@@ -2,7 +2,7 @@
 
 Living checklist of what is done vs not. Update this as work lands.
 
-Last reviewed: 2026-10-08 (employee live updates + delete + upload anim)
+Last reviewed: 2026-10-08 (admin yearly spend chart, BG translation pass, CLAUDE.md)
 
 ---
 
@@ -41,7 +41,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Flag descriptions UI (“Review notes” with tone + plain-language copy)
 - [x] Deterministic monthly-cost calculation (app code)
 - [x] Fixed USD→EUR company rate `0.8616` (same $ amount → same € every time)
-- [x] Admin review: approve / edit / reject + audit log
+- [x] Admin review: approve / edit / reject + audit log (written to `audit_logs`; no UI since the dashboard snippet was removed)
 - [x] Monthly reimbursement report + CSV export
 - [x] Document AI via Gemini (PDF/image bytes + structured JSON; mock without key)
 - [x] Invoice file preview / download on admin review (signed Storage URLs)
@@ -90,7 +90,8 @@ Upload → Analyze → Review → Calculate → Report
 
 ## Admin UI
 
-- [x] Dashboard (KPIs, pending queue, employees overview, audit snippet)
+- [x] Dashboard (KPIs, yearly spend chart, pending queue, employees overview)
+- [x] Yearly spend chart on dashboard (12 calendar-month bars, paid vs approved-unpaid, year total, ‹ › year switch via `?year=`, hover/focus tooltip) — built from `monthly_costs`, no new table; replaces the old audit-log snippet
 - [x] Pending invoice reviews + detail approve/edit/reject
 - [x] Employees list + employee detail
 - [x] Employee manage form (name, department, role, active)
@@ -112,6 +113,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Locale switcher in app shell, marketing home, and auth shell
 - [x] Locale-aware currency (`formatEurForLocale`) and dates/months
 - [x] CSV export headers follow `?locale=` from the report page
+- [x] BG copy review: "Проверка" (review) vs "Преглед" (preview only), "Прекратен/Прекрати" for cancelled subscriptions, "Предупреждения" instead of "Флагове", "Възстановяване на разходи", "превалутирано", proper ICU plurals for paid-months / new-invoice / flag counts
 - [x] Middleware composes next-intl with demo/Supabase auth (locale-stripped path checks)
 - [x] `next.config` uses a manual `next-intl/config` alias (avoids `createNextIntlPlugin` → `@swc/core` on hosts with strict SWC native-cache checks)
 
@@ -144,6 +146,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Employees may update own subscription status (RLS)
 - [x] Demo seed data (personas, subs, pending invoices)
 - [x] Calc unit test (`npm run test:calc`)
+- [x] `CLAUDE.md` with commands + architecture notes for AI agents (imports `AGENTS.md`)
 - [x] Signed URL helpers for invoice file access (`src/lib/storage.ts`)
 - [x] Flag catalog (`src/lib/invoices/flags.ts`)
 - [ ] Supabase seed for subscriptions / sample invoices
@@ -160,6 +163,9 @@ Upload → Analyze → Review → Calculate → Report
 3. **Demo vs Supabase upload** — demo may create a pending subscription on upload; Supabase waits until admin approve. File preview / registration / password reset unavailable in demo.
 4. **Email confirmation** — must be disabled in Supabase Dashboard for immediate register→login (documented in README). Not configurable from app code.
 5. **Middleware deprecation** — Next.js warns that `middleware` should migrate to `proxy`.
+6. **Spend chart = actual reimbursements, not forecast** — a month only has a bar if an approved invoice covers it; active subscriptions without a new invoice don't project into later months. `projected` rows are ignored.
+7. **BG short month names** — Node ICU returns numeric short months for `bg-BG` ("10"), so the chart abbreviates the long name (Яну, Фев, …).
+8. **Audit log has no viewer** — events are still recorded in `audit_logs`, but nothing in the UI lists them anymore.
 
 ---
 
@@ -169,4 +175,5 @@ Upload → Analyze → Review → Calculate → Report
 2. Expand tests beyond calc (validate, flags, FX)
 3. Async extraction status polling
 4. Middleware → proxy migration
-5. OAuth / MFA if needed beyond email/password
+5. Optional projected spend (future months from active `subscriptions.monthly_cost`) on the yearly chart
+6. OAuth / MFA if needed beyond email/password

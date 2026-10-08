@@ -10,7 +10,6 @@ import { guessMime } from "@/lib/mime";
 import { isDemoMode } from "@/lib/mode";
 import { createClient } from "@/lib/supabase/server";
 import type {
-  AuditLog,
   Employee,
   Invoice,
   MonthlyCost,
@@ -775,19 +774,52 @@ export async function markMonthlyCostsPaid(input: {
   return { updated: data?.length ?? 0 };
 }
 
-export async function listAuditLogs(limit = 20): Promise<AuditLog[]> {
+export type MonthlySpend = {
+  /** `YYYY-MM-01` */
+  month: string;
+  approved: number;
+  paid: number;
+};
+
+/** Company-wide approved + paid reimbursements per calendar month (EUR). */
+export async function getMonthlySpendForYear(
+  year: number,
+): Promise<MonthlySpend[]> {
+  const months: MonthlySpend[] = Array.from({ length: 12 }, (_, i) => ({
+    month: `${year}-${String(i + 1).padStart(2, "0")}-01`,
+    approved: 0,
+    paid: 0,
+  }));
+
+  let rows: Pick<MonthlyCost, "month" | "amount" | "status">[];
   if (isDemoMode()) {
-    return [...getDemoStore().auditLogs]
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, limit);
+    rows = getDemoStore().monthlyCosts;
+  } else {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("monthly_costs")
+      .select("month, amount, status")
+      .gte("month", `${year}-01-01`)
+      .lte("month", `${year}-12-31`)
+      .in("status", ["approved", "paid"]);
+    rows = (data ?? []) as typeof rows;
   }
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("audit_logs")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  return (data ?? []) as AuditLog[];
+
+  for (const row of rows) {
+    if (row.status === "projected") continue;
+    const [y, m] = row.month.split("-").map(Number);
+    if (y !== year || !m) continue;
+    const bucket = months[m - 1];
+    const amount = Number(row.amount) || 0;
+    if (row.status === "paid") bucket.paid += amount;
+    else bucket.approved += amount;
+  }
+
+  return months.map((m) => ({
+    ...m,
+    approved: Math.round(m.approved * 100) / 100,
+    paid: Math.round(m.paid * 100) / 100,
+  }));
 }
 
 export async function processInvoiceUpload(input: {

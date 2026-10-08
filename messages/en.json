@@ -43,7 +43,9 @@
     "noResults": "No results.",
     "back": "Back",
     "review": "Review",
-    "pending": "Pending"
+    "pending": "Pending",
+    "menu": "Menu",
+    "closeMenu": "Close menu"
   },
   "Locale": {
     "bg": "БГ",
@@ -260,12 +262,6 @@
     "monthly": "Monthly",
     "employeeSpend": "Employee spend",
     "subscriptions": "Subscriptions",
-    "recentAudit": "Recent audit log",
-    "when": "When",
-    "action": "Action",
-    "actor": "Actor",
-    "entity": "Entity",
-    "noAudit": "No audit events yet.",
     "reviewsTitle": "Invoice reviews",
     "reviewsSubtitle": "Approve, edit, or reject employee uploads.",
     "filterAll": "All",
@@ -310,7 +306,6 @@
     "companyWideSubtitle": "Company-wide subscription spend and review queue.",
     "pendingReviews": "Pending reviews",
     "employeeOverview": "Employee overview",
-    "financialEditsHint": "Financial edits will appear here after admin actions.",
     "manageAccess": "Manage access",
     "manageAccessHint": "Only admins can set role to admin. New self-registrations always start as employee.",
     "aiConfidence": "AI confidence",
@@ -335,7 +330,15 @@
     "noMonthlyCostsInRange": "No monthly costs in this range.",
     "exportCsv": "Download CSV",
     "pending": "Pending",
-    "employees": "Employees"
+    "employees": "Employees",
+    "spendTitle": "Spending through the year",
+    "spendYearTotal": "Total for {year}:",
+    "spendPaid": "Paid",
+    "spendApproved": "Approved, unpaid",
+    "spendTotal": "Total",
+    "spendEmpty": "No approved spending for {year}.",
+    "spendPrevYear": "Previous year",
+    "spendNextYear": "Next year"
   },
   "Employee": {
     "subscriptionsTitle": "My subscriptions",

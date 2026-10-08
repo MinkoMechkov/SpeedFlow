@@ -7,38 +7,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SpendChart } from "@/components/admin/spend-chart";
 import { TableIconLink } from "@/components/table-icon-link";
 import { Link } from "@/i18n/navigation";
 import { requireAdmin } from "@/lib/auth";
 import {
   getAdminKpis,
   getEmployeeOverview,
-  listAuditLogs,
+  getMonthlySpendForYear,
   listPendingInvoices,
 } from "@/lib/data";
-import {
-  formatDateTimeForLocale,
-  formatEurForLocale,
-} from "@/lib/locale-format";
+import { formatEurForLocale } from "@/lib/locale-format";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ year?: string }>;
 }) {
   const { locale: routeLocale } = await params;
+  const currentYear = new Date().getUTCFullYear();
+  const requestedYear = Number((await searchParams).year);
+  const year =
+    Number.isInteger(requestedYear) &&
+    requestedYear >= 2000 &&
+    requestedYear <= currentYear
+      ? requestedYear
+      : currentYear;
   setRequestLocale(routeLocale);
   await requireAdmin();
   const t = await getTranslations("Admin");
   const tCommon = await getTranslations("Common");
   const locale = await getLocale();
-  const [kpis, overview, pending, audits] = await Promise.all([
+  const [kpis, overview, pending, spend] = await Promise.all([
     getAdminKpis(),
     getEmployeeOverview(),
     listPendingInvoices(),
-    listAuditLogs(8),
+    getMonthlySpendForYear(year),
   ]);
 
   const cards = [
@@ -73,6 +81,8 @@ export default async function AdminDashboardPage({
           </div>
         ))}
       </div>
+
+      <SpendChart data={spend} year={year} locale={locale} />
 
       <section className="space-y-3">
         <div className="flex items-center justify-between">
@@ -162,29 +172,6 @@ export default async function AdminDashboardPage({
             </TableBody>
           </Table>
         </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium">{t("recentAudit")}</h2>
-        {audits.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {t("financialEditsHint")}
-          </p>
-        ) : (
-          <ul className="space-y-2 rounded-xl border border-border/80 bg-card/60 p-4 text-sm">
-            {audits.map((log) => (
-              <li
-                key={log.id}
-                className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2 last:border-0 last:pb-0"
-              >
-                <span className="font-medium">{log.action}</span>
-                <span className="text-muted-foreground">
-                  {formatDateTimeForLocale(log.created_at, locale)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
       </section>
     </div>
   );

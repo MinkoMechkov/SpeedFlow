@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import type { SessionUser } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavLinks } from "@/components/layout/nav-links";
 import { UserMenu } from "@/components/layout/user-menu";
 
@@ -20,21 +21,22 @@ export async function AppShell({
     session.employee.role === "admin" ? "/admin" : "/employee/subscriptions";
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-[color-mix(in_oklab,var(--background)_82%,transparent)] backdrop-blur-md supports-[backdrop-filter]:bg-[color-mix(in_oklab,var(--background)_70%,transparent)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:gap-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <MobileNav items={nav} />
             <Link
               href={homeHref}
-              className="font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--brand-deep)]"
+              className="truncate font-[family-name:var(--font-display)] text-xl tracking-tight text-[var(--brand-deep)]"
             >
               SpendFlow
             </Link>
-            <nav className="hidden items-center gap-1 md:flex">
+            <nav className="ml-5 hidden items-center gap-1 md:flex">
               <NavLinks items={nav} variant="desktop" />
             </nav>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <LocaleSwitcher />
             <UserMenu
               name={session.employee.name}
@@ -44,11 +46,8 @@ export async function AppShell({
             />
           </div>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 md:hidden sm:px-6">
-          <NavLinks items={nav} variant="mobile" />
-        </nav>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-8 sm:px-6">
         {children}
       </main>
     </div>

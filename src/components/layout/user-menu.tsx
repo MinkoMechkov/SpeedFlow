@@ -46,7 +46,7 @@ export function UserMenu({
         className="group flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 data-popup-open:bg-muted/60"
       >
         <span className="min-w-0">
-          <span className="block max-w-[9.5rem] truncate text-sm font-medium sm:max-w-[12rem]">
+          <span className="block max-w-[7rem] truncate text-sm font-medium sm:max-w-[12rem]">
             {name}
           </span>
           <span className="hidden text-xs text-muted-foreground sm:block">
