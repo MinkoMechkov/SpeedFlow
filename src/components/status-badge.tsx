@@ -13,6 +13,8 @@ const KNOWN = [
   "paused",
   "cancelled",
   "pending",
+  "paid",
+  "projected",
 ] as const;
 
 export function StatusBadge({ status }: { status: string }) {
@@ -21,7 +23,7 @@ export function StatusBadge({ status }: { status: string }) {
     ? t(status as (typeof KNOWN)[number])
     : status;
   const variant =
-    status === "approved" || status === "active"
+    status === "paid" || status === "active"
       ? "default"
       : status === "rejected" || status === "cancelled"
         ? "destructive"

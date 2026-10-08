@@ -324,16 +324,31 @@ export async function getMyMonthlyCosts(
 ): Promise<MonthlyCost[]> {
   if (isDemoMode()) {
     const store = getDemoStore();
-    return store.monthlyCosts.filter(
-      (m) =>
-        m.employee_id === session.employee.id &&
-        (!month || m.month === month),
-    );
+    return store.monthlyCosts
+      .filter(
+        (m) =>
+          m.employee_id === session.employee.id &&
+          (!month || m.month === month),
+      )
+      .map((m) => {
+        const subscription = store.subscriptions.find(
+          (s) => s.id === m.subscription_id,
+        );
+        const tool = subscription
+          ? store.tools.find((t) => t.id === subscription.tool_id)
+          : undefined;
+        return {
+          ...m,
+          subscription: subscription
+            ? { ...subscription, tool: tool ?? undefined }
+            : undefined,
+        };
+      });
   }
   const supabase = await createClient();
   let q = supabase
     .from("monthly_costs")
-    .select("*")
+    .select("*, subscription:subscriptions(*, tool:tools(*))")
     .eq("employee_id", session.employee.id);
   if (month) q = q.eq("month", month);
   const { data } = await q.order("month", { ascending: false });

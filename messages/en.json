@@ -141,7 +141,9 @@
     "active": "Active",
     "paused": "Paused",
     "cancelled": "Cancelled",
-    "pending": "Pending"
+    "pending": "Pending",
+    "paid": "Paid",
+    "projected": "Projected"
   },
   "BillingCycle": {
     "monthly": "Monthly",
@@ -377,7 +379,9 @@
     "history": "History",
     "backToInvoices": "Back to invoices",
     "monthlyAmount": "Monthly {amount}",
-    "totalThisMonth": "Total this month",
+    "unpaidThisMonth": "Unpaid (approved)",
+    "paidThisMonth": "Already paid",
+    "noReimbursementThisMonth": "No reimbursement rows for this month yet.",
     "subscription": "Subscription",
     "monthly": "Monthly",
     "reimbursementCalculatedFor": "Calculated for {month}",

@@ -81,7 +81,7 @@ Upload → Analyze → Review → Calculate → Report
 - [x] Invoices list (+ empty state)
 - [x] Upload form (+ custom tool)
 - [x] Animated upload illustration (tool / upload / analyze steps; reduced-motion safe)
-- [x] Reimbursement (current month)
+- [x] Reimbursement (current month; unpaid approved vs paid split, status column; no subscription-estimate fallback)
 - [x] Invoice detail + file viewer + review notes
 - [x] Delete own invoice until approved (list + detail confirm dialog)
 - [ ] Create / edit own subscription fields beyond status (plan, dates, etc.)

@@ -141,7 +141,9 @@
     "active": "Активен",
     "paused": "На пауза",
     "cancelled": "Прекратен",
-    "pending": "Чака одобрение"
+    "pending": "Чака одобрение",
+    "paid": "Платено",
+    "projected": "Прогнозно"
   },
   "BillingCycle": {
     "monthly": "Месечно",
@@ -377,7 +379,9 @@
     "history": "История",
     "backToInvoices": "Назад към фактурите",
     "monthlyAmount": "{amount} на месец",
-    "totalThisMonth": "Общо този месец",
+    "unpaidThisMonth": "Неплатено (одобрено)",
+    "paidThisMonth": "Вече платено",
+    "noReimbursementThisMonth": "Все още няма редове за възстановяване за този месец.",
     "subscription": "Абонамент",
     "monthly": "Месечно",
     "reimbursementCalculatedFor": "Изчислено за {month}",
